@@ -1,19 +1,91 @@
-post_treat <- function(model_options, final_forced_param_values, res_it3,
-                       sitNames_corresp, wrapper_outputs, obs, 
-                       transform_sim, template_path, out_dir, test_case, variety) {
+generate_results_files <- function(group, model_options, 
+                                   complem_info, res_it2, res_it3,
+                                   sitNames_corresp, sim_final, obs, 
+                                   template_path, out_dir, test_case, variety) {
+
+  # Table5 
+  group_name <- names(group)
   
-  converted_obs_list <- obs$converted_obs_list
+  dirs <- list.dirs(file.path(out_dir,"Iteration1"))
+  files <- list.files(path=dirs, pattern="optim_results.Rdata", full.names = TRUE)          
+  files <- lapply(group_name, function(x) {
+    if (length(grep(x,files))>1) {
+      return(files[grep(x,files)[-1]])
+    } else {
+      return(files[grep(x,files)])
+    }
+  })
+  names(files) <- group_name
+  
+  Table5 <- NULL        
+  for (gr in group_name) {
+    
+    Table5 <- bind_rows(Table5, lapply(files[[gr]], function(x) {
+      load(x)
+      setNames(
+        tibble(gr,
+               list(names(res$final_values)),
+               nrow(res$init_values),
+               res$min_crit_value,
+               res$BIC,
+               nrow(res$params_and_crit)),
+        nm=c("group","name of the parameters","Number of starting values",
+             "Final SS","Final BIC", "Total number of calls to model")
+      )
+    }))
+    
+  }
+  save_table(table=Table5, table_name="Table5", path=out_dir)
+  
+  
+  # Table6
+  variables <- sapply(names(complem_info$it2$weight), 
+                      function(x) names(varNames_corresp)[grep(x,varNames_corresp)],
+                      USE.NAMES = FALSE)
+  Table6 <- data.frame(Variables=variables, `Estimated sd of model error`=as.numeric(complem_info$it2$weight))
+  save_table(table=Table6, table_name="Table6", path=out_dir)
+  
+  # Table7
+  Table7 <- generate_table7_like(res_it2, group)
+  save_table(table=Table7, table_name="Table7", path=out_dir)
+  
+  # Table8
+  variables <- sapply(names(complem_info$it3$weight), 
+                      function(x) names(varNames_corresp)[grep(x,varNames_corresp)],
+                      USE.NAMES = FALSE)
+  Table8 <- data.frame(Variables=variables, `Estimated sd of model error`=as.numeric(complem_info$it3$weight))
+  save_table(table=Table8, table_name="Table8", path=out_dir)
+  
+  # Table9
+  Table9 <- generate_table7_like(res_it3, group)
+  save_table(table=Table9, table_name="Table9", path=out_dir)
+  
+  # Table10
+  sim_list_transformed <- apply_transform_var(sim_final$sim_list, transform_var)
+  rmse_final <- setNames(
+    summary(sim_list_transformed, obs=obs$converted_obs_list, stats = c("RMSE"))$RMSE,
+    nm=summary(sim_list_transformed, obs=obs$converted_obs_list, stats = c("RMSE"))$variable)
+  rmse_final[names(rmse_final)!="Date"]
+  
+  Table10 <- data.frame(Variables=variables, `Estimated sd of model error`=as.numeric(rmse_final))
+  save_table(table=Table10, table_name="Table10", path=out_dir)
+  
+  
+  # Generate cal_4_results_* files
+  generate_cal_results(sim_final, obs, sitNames_corresp, 
+                       template_path, out_dir, test_case, variety)
+  
+}
+
+
+generate_cal_results <- function(sim_final, obs, sitNames_corresp, 
+                                 template_path, out_dir, test_case, variety) {
+  
   obs_list <- obs$obs_list
   obsVar_names <- obs$obsVar_names
   obsVar_units <- obs$obsVar_units
   obsVar_used <- obs$obsVar_used
   var_date <- obsVar_used[grepl("Date",obsVar_used)]
-  
-  sim_final <- run_wrapper(model_options=model_options,
-                                 param_values=c(final_forced_param_values,res_it3$final_values),
-                                 situation=sitNames_corresp, var=wrapper_outputs, 
-                                 obs_list=converted_obs_list,
-                                 transform_sim=transform_sim)
   
   # Convert simulations to observation space (names of situations and variables, units)
   sim_final_converted <- sim_final
@@ -30,7 +102,7 @@ post_treat <- function(model_options, final_forced_param_values, res_it3,
   # Plot the results
   p <- plot(sim_final_converted$sim_list, obs=obs_list, type="scatter")
   CroPlotR::save_plot_pdf(p, out_dir, file_name = "scatterPlots")
-    
+  
   # Compute stats criteria
   stats <- summary(sim_final_converted$sim_list, obs=obs_list, stats=c("MSE", "Bias2","SDSD","LCS"))
   write.table(dplyr::select(stats,-group, -situation),file = file.path(out_dir,"stats.txt"),row.names = FALSE, quote=FALSE)
@@ -100,18 +172,61 @@ post_treat <- function(model_options, final_forced_param_values, res_it3,
                                                                                       origin=Origin),"%d/%m/%Y")))) %>%
       select(-Origin, -year_sowing) %>% relocate(names(template_df))
   }
-      
-  ################################################################################
-  # At the beginning ask model name and contact person to set the name fo the result file
-  ################################################################################
   
   suffix <- NULL
   if (test_case=="French") suffix <- paste0("_",variety) 
   write.table(res_df,file = file.path(out_dir,paste0("cal_4_results_", test_case, suffix, "numerical_XXX.txt")),
               row.names = FALSE, quote=FALSE)
   
-  # Generate a report with the list of parameters, ...
+}
+
+
+
+generate_table7_like <- function(res, group) {
+  param_group <- setNames(object=sapply(strsplit(names(unlist(group)), split="[.]"), `[`)[1,], 
+                          nm=unlist(group))
+  table <- bind_rows(lapply(names(res$final_values), function(param) {
+    setNames(
+      tibble(param_group[param][[1]],
+             param,
+             res$init_values[res$ind_min_crit, param],
+             res$final_values[param]),
+      nm=c("group","name of the parameters","Initial parameter value",
+           "Final parameter value")
+    )
+  }))
   
+  return(table)
+}
+
+
+save_table <- function (table, table_name, path) {
   
+  tb <- purrr::modify_if(
+    table,
+    function(x) !is.list(x), as.list
+  )
+  # format everything in char and 2 digits
+  tb <- purrr::modify(
+    tb,
+    function(x) {
+      unlist(
+        purrr::modify(x, function(y) {
+          paste(format(y,
+                       scientific = FALSE,
+                       digits = 2, nsmall = 2
+          ), collapse = ", ")
+        })
+      )
+    }
+  )
+  
+  utils::write.table(tb,
+                     sep = ";", file = file.path(
+                       path,
+                       paste0(table_name,".csv")
+                     ),
+                     row.names = FALSE
+  )
   
 }

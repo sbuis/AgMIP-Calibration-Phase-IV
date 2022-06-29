@@ -29,18 +29,26 @@ run_wrapper <- function(model_options, param_values, situation, var, obs_list,
     
   }
   
+  sim$sim_list <- apply_transform_var(sim$sim_list, transform_var)
+      
+  return(sim)
+  
+}
+
+apply_transform_var <- function(sim_list, transform_var) {
+  
   if (!is.null(transform_var)) {
     
-    sim$sim_list <- lapply(sim$sim_list, function(x) {
+    sim_list <- lapply(sim_list, function(x) {
       for (var in intersect(names(x),names(transform_var))) {
         x[var] <- transform_var[[var]](x[var])
       }
       return(x)
     })
-    attr(sim$sim_list, "class") <- "cropr_simulation"
-  
+    attr(sim_list, "class") <- "cropr_simulation"
+    
   }
-      
-  return(sim)
+  
+  return(sim_list) 
   
 }

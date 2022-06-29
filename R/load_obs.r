@@ -2,11 +2,12 @@ load_obs <- function(obs_data_path, obs_unit_path, varNames_corresp,
                      sitNames_corresp, simVar_units) {
   
   obs_df <- read.table(file=obs_data_path, header = TRUE, stringsAsFactors = FALSE)
-  obs_units <- read.table(file=obs_unit_path, header = TRUE, stringsAsFactors = FALSE, sep=";")
+  obs_units <- read.table(file=obs_unit_path, header = TRUE, stringsAsFactors = FALSE, 
+                          sep=";", strip.white=TRUE)
   
   obsVar_names <- obs_units$Column.name
   obsVar_units <- setNames(obs_units$Unit, nm = obsVar_names)
-  obsVar_groups <- obs_units$Group
+  obsVar_groups <- tolower(obs_units$Group)
   obsVar_used <- names(varNames_corresp)
   
   # Check coherency between varNames_corresp and obs names
@@ -61,10 +62,11 @@ load_obs <- function(obs_data_path, obs_unit_path, varNames_corresp,
     stop(paste0("Obs data file and obs units file are not coherent. ",
                 "Please check that all variables included in obs units file are also included in the obs data file.\n",
                 paste(setdiff(obsVar_names, names(obs_df)), collapse = ","), 
-                "included in obs units file but not in obs data file.\n"))
+                " included in obs units file ",obs_unit_path," but not in obs data file ",
+                obs_data_path,".\n"))
   
   # Only keep the observed variables that will be used 
-  obs_df <- select(obs_df, c("Situation", "Date", obsVar_used))
+  obs_df <- select(obs_df, c("Situation", "Date", all_of(obsVar_used)))
   # or select all observed variables ?
   # obs_df <- select(obs_df, c("Situation", "Date", all_of(obsVar_names)))
   

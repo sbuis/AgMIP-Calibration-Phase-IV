@@ -12,6 +12,14 @@ install_load <- function() {
     install.packages("units")
     library("units")
   }
+  if(!require("data.table")){
+    install.packages("data.table")
+    library("data.table")
+  }
+  if(!require("readxl")){
+    install.packages("readxl")
+    library("readxl")
+  }
   if(!require("CroptimizR")){
     devtools::install_github("SticsRPacks/CroptimizR@*release")
     library("CroptimizR")
@@ -21,10 +29,6 @@ install_load <- function() {
     library("CroPlotR")
   }
   
-  source(file.path(here(),"R/check_user_inputs.r"))
-  source(file.path(here(),"R/conversion.r"))
-  source(file.path(here(),"R/load_obs.r"))
-  source(file.path(here(),"R/post_treat.r"))
-  source(file.path(here(),"R/run_wrapper.r"))
+  invisible(lapply(list.files(file.path(here(),"R"), full.names=TRUE), function(x) source(x)))
   
 }
