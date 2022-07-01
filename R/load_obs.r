@@ -12,11 +12,12 @@ load_obs <- function(obs_data_path, obs_unit_path, varNames_corresp,
   
   # Check coherency between varNames_corresp and obs names
   if (!all(names(varNames_corresp) %in% obsVar_names)) 
-    stop(paste0("Incorrect definition of varNames_corresp. ",
-                "Please check that all variables included in varNames_corresp are also included in the observation list (as defined in obs unit file).\n",
+    stop(paste0("Incorrect names for the observed variables. ",
+                "Please check that the names of observed variables defined in the \"variables\" sheet of the protocol description xls file are identical to these listed in the observation units file:",
+                obs_unit_path,"\n",
                 paste(setdiff(names(varNames_corresp), obsVar_names), collapse = ","), 
-                " included in varNames_corresp but not in observation list.\n",
-                "List of variables included in observation list: ",
+                " are listed in the protocol description xls file but not in the observation unit file.\n",
+                "List of variables included in the observation unit file: ",
                 paste(obsVar_names, collapse = ",")))
   
   # Transform observed dates of phenological stages in julian days from 31/12/(sowing year-1)

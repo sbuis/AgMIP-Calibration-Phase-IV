@@ -9,10 +9,10 @@ check_user_inputs <- function(simVar_units, varNames_corresp, transform_outputs)
                 " included in simVar_units but not in varNames_corresp.\n"))
   
   if (!all(transform_outputs %in% varNames_corresp)) 
-    stop(paste0("Incorrect definition of transform_outputs or varNames_corresp. ",
-                "Please check that all variables included in transform_outputs are also included in varNames_corresp.\n",
+    stop(paste0("Incorrect definition of transform_outputs or of the list of simulated variables defined in the \"variables\" sheet of the protocol description xls file ",
+                "Please check that all variables included in transform_outputs are also included in this sheet.\n",
                 paste(setdiff(transform_outputs, varNames_corresp), collapse = ","), 
-                " included in transform_outputs but not in varNames_corresp.\n"))
+                " included in transform_outputs but not in the xls sheet.\n"))
   
 }
 
