@@ -95,7 +95,7 @@ check_protocol <- function(protocol_path) {
     `variables`=c("Name of the observed variable", "Name of the simulated variable"),
     `almost additive parameters`=c("name of the parameter", "group", "default value", "lower bound", "upper bound"),
     `candidate parameters`=c("name of the parameter", "group", "default value", "lower bound", "upper bound"),
-    `equality constraints`=c("name of the parameter", "group", "formula"),
+    `equality constraints`=c("name of the parameter", "formula"),
     `situation names`=c("Number", "Situation Name")
   )
   invisible(
