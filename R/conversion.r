@@ -28,14 +28,8 @@ rename_var <- function(simobs, corresp, invert=FALSE) {
     corresp <- tmp
   }
   for (sit in names(simobs)) {
-    if (any(names(corresp) %in% colnames(simobs[[sit]]))) {
-      stop(paste("Error converting simulated variables names in observed variables names: variable(s)",
-                 paste(intersect(names(corresp),colnames(simobs[[sit]])), collapse = ","),
-                 "already there in simulated variables names. Please check corresp."))
-    }
-    idx <- colnames(simobs[[sit]]) %in% corresp
-    colnames(simobs[[sit]])[idx] <- 
-      names(corresp[match(colnames(simobs[[sit]])[idx],corresp)])
+    simobs[[sit]][,names(corresp)] <- simobs[[sit]][,corresp] 
+    simobs[[sit]] <- select(simobs[[sit]], -all_of(corresp))
   }
   return(simobs)
 }
