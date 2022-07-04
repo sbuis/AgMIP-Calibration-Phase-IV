@@ -1,14 +1,30 @@
 load_obs <- function(obs_data_path, obs_unit_path, varNames_corresp, 
-                     sitNames_corresp, simVar_units) {
+                     sitNames_corresp, simVar_units, obsVar_group) {
   
   obs_df <- read.table(file=obs_data_path, header = TRUE, stringsAsFactors = FALSE)
   obs_units <- read.table(file=obs_unit_path, header = TRUE, stringsAsFactors = FALSE, 
                           sep=";", strip.white=TRUE)
   
-  obsVar_names <- obs_units$Column.name
-  obsVar_units <- setNames(obs_units$Unit, nm = obsVar_names)
-  obsVar_groups <- tolower(obs_units$Group)
-  obsVar_used <- names(varNames_corresp)
+  # obsVar_names <- obs_units$Column.name
+  obsVar_names <- setdiff(names(obs_df),c("Number","Site","HarvestYear","SowingDate", "Variety","Date"))
+  obsVar_units <- setNames(obs_units$Unit, nm = obs_units$Column.name)
+  if ("Date_*" %in% names(obsVar_units)) {
+    obsVar_units[obsVar_names[grep("Date_",obsVar_names)]] <- obsVar_units["Date_*"]
+    obsVar_units <- obsVar_units[names(obsVar_units)!="Date_*"]
+  }
+  # Check that all observed variables defined in the obs_data file have a unit defined in the obs_unit file
+  if ( !all(obsVar_names %in% names(obsVar_units)) ) {
+    stop(paste("Variable(s)",paste(setdiff(obsVar_names,names(obsVar_units)),collapse = ","),"included in the observation data file",obs_data_path,
+    "is (are) not defined in the observation unit file",
+    obs_unit_path))
+  }
+  ## Change the def. of their units
+  obsVar_units[grep("Date",names(obsVar_units))] <- "d"
+  
+  
+  obsVar_groups <- tolower(obs_units$Group[!is.na(obs_units$Group)])
+  obsVar_used <- intersect(intersect(obsVar_names, names(varNames_corresp)), 
+                            names(obsVar_group))
   
   # Check coherency between varNames_corresp and obs names
   if (!all(names(varNames_corresp) %in% obsVar_names)) 
@@ -42,8 +58,6 @@ load_obs <- function(obs_data_path, obs_unit_path, varNames_corresp,
                                                    format = "%d/%m/%Y"),
                                            origin=Origin)))
   }
-  ## Change the def. of their units
-  obsVar_units[var_date] <- "d"
   
   # Add units
   for (var in intersect(names(obs_df), obsVar_used)) {
