@@ -1,7 +1,8 @@
 generate_results_files <- function(group, model_options, 
                                    complem_info, res_it2, res_it3,
                                    sitNames_corresp, sim_final, obs, 
-                                   template_path, out_dir, test_case, variety) {
+                                   template_path, out_dir, test_case, variety,
+                                   varNames_corresp) {
 
   # Table5 
   group_name <- names(group)
@@ -39,15 +40,13 @@ generate_results_files <- function(group, model_options,
   
   
   # Table6
-  variables <- sapply(names(complem_info$it2$weight), 
-                      function(x) names(varNames_corresp)[grep(x,varNames_corresp)],
-                      USE.NAMES = FALSE)
   model_error_sd <- complem_info$it2$weight
-  for (var in names(model_error_sd)) {  # convert from model units to obs units
-    units(model_error_sd[[var]]) <- simVar_units[[var]]
-    units(model_error_sd[[var]]) <- obs$obsVar_units[[names(varNames_corresp)[grep(var,varNames_corresp)]]]
+  for (var in obs$obsVar_used) {  # convert from model units to obs units
+    varSim <- varNames_corresp[[var]]
+    units(model_error_sd[[varSim]]) <- simVar_units[[varSim]]
+    units(model_error_sd[[varSim]]) <- obs$obsVar_units[[var]]
   }
-  Table6 <- data.frame(Variables=variables, `Estimated sd of model error`=as.numeric(model_error_sd))
+  Table6 <- data.frame(Variables=obs$obsVar_used, `Estimated sd of model error`=as.numeric(model_error_sd))
   save_table(table=Table6, table_name="Table6", path=out_dir)
   
   # Table7
@@ -55,15 +54,13 @@ generate_results_files <- function(group, model_options,
   save_table(table=Table7, table_name="Table7", path=out_dir)
   
   # Table8
-  variables <- sapply(names(complem_info$it3$weight), 
-                      function(x) names(varNames_corresp)[grep(x,varNames_corresp)],
-                      USE.NAMES = FALSE)
   model_error_sd <- complem_info$it3$weight
-  for (var in names(model_error_sd)) {  # convert from model units to obs units
-    units(model_error_sd[[var]]) <- simVar_units[[var]]
-    units(model_error_sd[[var]]) <- obs$obsVar_units[[names(varNames_corresp)[grep(var,varNames_corresp)]]]
+  for (var in obs$obsVar_used) {  # convert from model units to obs units
+    varSim <- varNames_corresp[[var]]
+    units(model_error_sd[[varSim]]) <- simVar_units[[varSim]]
+    units(model_error_sd[[varSim]]) <- obs$obsVar_units[[var]]
   }
-  Table8 <- data.frame(Variables=variables, `Estimated sd of model error`=as.numeric(model_error_sd))
+  Table8 <- data.frame(Variables=obs$obsVar_used, `Estimated sd of model error`=as.numeric(model_error_sd))
   save_table(table=Table8, table_name="Table8", path=out_dir)
   
   # Table9
@@ -76,30 +73,31 @@ generate_results_files <- function(group, model_options,
     summary(sim_list_transformed, obs=obs$converted_obs_list, stats = c("RMSE"))$RMSE,
     nm=summary(sim_list_transformed, obs=obs$converted_obs_list, stats = c("RMSE"))$variable)
   rmse_final <- tibble::tibble(!!!rmse_final)
-  for (var in names(rmse_final)) {  # convert from model units to obs units
-    units(rmse_final[[var]]) <- simVar_units[[var]]
-    units(rmse_final[[var]]) <- obs$obsVar_units[[names(varNames_corresp)[grep(var,varNames_corresp)]]]
+  for (var in obs$obsVar_used) {  # convert from model units to obs units
+    varSim <- varNames_corresp[[var]]
+    units(rmse_final[[varSim]]) <- simVar_units[[varSim]]
+    units(rmse_final[[varSim]]) <- obs$obsVar_units[[var]]
   }
-  
-  Table10 <- data.frame(Variables=variables, `Estimated sd of model error`=as.numeric(rmse_final))
+  Table10 <- data.frame(Variables=obs$obsVar_used, `Estimated sd of model error`=as.numeric(rmse_final))
   save_table(table=Table10, table_name="Table10", path=out_dir)
   
   
   # Generate cal_4_results_* files
   generate_cal_results(sim_final, obs, sitNames_corresp, 
-                       template_path, out_dir, test_case, variety)
+                       template_path, out_dir, test_case, variety, varNames_corresp)
   
 }
 
 
 generate_cal_results <- function(sim_final, obs, sitNames_corresp, 
-                                 template_path, out_dir, test_case, variety) {
+                                 template_path, out_dir, test_case, variety,
+                                 varNames_corresp) {
   
   obs_list <- obs$obs_list
   obsVar_names <- obs$obsVar_names
   obsVar_units <- obs$obsVar_units
   obsVar_used <- obs$obsVar_used
-  var_date <- obsVar_used[grepl("Date",obsVar_used)]
+  var_date <- names(varNames_corresp)[grepl("Date",names(varNames_corresp))]
   
   # Convert simulations to observation space (names of situations and variables, units)
   sim_final_converted <- sim_final
