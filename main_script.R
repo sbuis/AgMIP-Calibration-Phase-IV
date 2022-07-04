@@ -7,10 +7,10 @@ source(file.path(here(),"R/install_load.r"))
 install_load()
 
 # Define the test case ("French" or "Australian") and variety (only used for French dataset)
-test_case <- "French"
-variety <- "Bermude"  # "Apache" or "Bermude"
-# test_case <- "Australian"
-# variety <- "Janz"
+# test_case <- "French"
+# variety <- "Bermude"  # "Apache" or "Bermude"
+test_case <- "Australian"
+variety <- "Janz"
 
 # Set-up your model wrapper
 library(SticsOnR)
@@ -35,7 +35,7 @@ if (test_case=="French") {
 }
 
 ############################# A ENLEVER ########################
-xls_path <- file.path(here(),"data","protocol_descr_french_Bermude_TEST.xlsx")
+# xls_path <- file.path(here(),"data","protocol_descr_french_Bermude_TEST.xlsx")
 
 
 protocol_descr <- load_protocol(xls_path)
@@ -44,8 +44,8 @@ varNames_corresp <- protocol_descr$varNames_corresp
 simVar_units <- protocol_descr$simVar_units 
 param_info <- protocol_descr$param_info
 forced_param_values <- protocol_descr$forced_param_values 
-group <- protocol_descr$group
-
+group <- protocol_descr$group # liste of params to estimate per group
+obsVar_group <- protocol_descr$obsVar_group # groups of observed variables used in the calibration
 
 # In this example, N_in_biomassHarvest is not direclty computed by the model.
 # The model simulates a variable, called QNplante, which is the N in biomass in kg ha-1, 
@@ -85,19 +85,26 @@ if (test_case=="French") suffix <- paste0("_",variety)
 obs_data_path <- file.path(here(),"data",paste0("cal_4_obs_",test_case,suffix,".txt"))
 obs_unit_path <- file.path(here(),"data",paste0("cal_4_obs_",test_case,"_units.csv"))
 obs <- load_obs(obs_data_path, obs_unit_path, varNames_corresp, 
-                sitNames_corresp, simVar_units)
+                sitNames_corresp, simVar_units, obsVar_group)
 
 ######## A ENLEVER !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-if (test_case=="French") {
-  obs$converted_obs_list <- filter_obs(obs$converted_obs_list, 
-                           situation = c("MERY-Be-14-126416", "MERY-Be-11-119630",
-                                         "MERY-Be-15-128539"), 
-                           include=TRUE)
-} else {
-  obs$converted_obs_list <- filter_obs(obs$converted_obs_list, 
-                                       situation = c("Lake-2011-TOS2", "Minn-2011-TOS3",
-                                                     "Erad-2010-TOS1"), 
-                                       include=TRUE)
+# if (test_case=="French") {
+#   obs$converted_obs_list <- filter_obs(obs$converted_obs_list, 
+#                            situation = c("MERY-Be-14-126416", "MERY-Be-11-119630",
+#                                          "MERY-Be-15-128539"), 
+#                            include=TRUE)
+# } else {
+#   obs$converted_obs_list <- filter_obs(obs$converted_obs_list, 
+#                                        situation = c("Lake-2011-TOS2", "Minn-2011-TOS3",
+#                                                      "Erad-2010-TOS1"), 
+#                                        include=TRUE)
+# }
+######## A ENLEVER !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+######## A ENLEVER !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+if ("variete" %in% names(forced_param_values)) {
+  forced_param_values <- forced_param_values[c("variete",setdiff(names(forced_param_values),"variete"))]
 }
 ######## A ENLEVER !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -118,7 +125,8 @@ cat("\n----- Parameter estimation Iteration 1\n")
 cat("--------------------------------------\n")
 
 ############ A ENLEVER #######################################
-optim_options=list(nb_rep=c(3,2), maxeval=15, ranseed=1234)
+optim_options=list(nb_rep=c(15,5), maxeval=5000, ranseed=1234, xtol_rel=1e-2, ftol_rel=1e-4)
+# optim_options=list(nb_rep=c(1,1), maxeval=2, ranseed=1234, xtol_rel=1e-2, ftol_rel=1e-4)
 ############ A ENLEVER #######################################
 
 transform_var <- eval(parse(text=paste0("c(",varNames_corresp[["Biomass"]],
@@ -134,7 +142,7 @@ while (igr < length(group)) {
   
   ## Filter observations to use for the current group
   crt_var_list <- varNames_corresp[intersect(obs$obsVar_used,
-                                             obs$obsVar_names[grep(gr, obs$obsVar_groups)])]
+                                             names(obsVar_group)[grep(gr, obsVar_group)])]
   crt_obs_list <- filter_obs(obs_list=obs$converted_obs_list, var=crt_var_list, include=TRUE)
   
   ## Filter information on the parameters to estimate for the current group
@@ -181,7 +189,9 @@ cat("\n----- Parameter estimation Iteration 2\n")
 cat("--------------------------------------\n")
 
 ############ A ENLEVER #######################################
-optim_options=list(nb_rep=2, maxeval=15, ranseed=1234)
+# optim_options=list(nb_rep=2, maxeval=15, ranseed=1234)
+optim_options=list(nb_rep=15, maxeval=5000, ranseed=1234, xtol_rel=1e-2, ftol_rel=1e-4)
+# optim_options=list(nb_rep=1, maxeval=2, ranseed=1234, xtol_rel=1e-2, ftol_rel=1e-4)
 ############ A ENLEVER #######################################
 
 final_params <- unlist(lapply(res_it1, function(x) names(x$final_values)))
@@ -257,7 +267,9 @@ cat("--------------------------------------\n")
 if (is.null(res_it3)) {
   
   ############ A ENLEVER #######################################
-  optim_options=list(nb_rep=2, maxeval=15, ranseed=1234)
+  # optim_options=list(nb_rep=2, maxeval=15, ranseed=1234)
+  optim_options=list(nb_rep=15, maxeval=5000, ranseed=1234, xtol_rel=1e-2, ftol_rel=1e-4)
+  # optim_options=list(nb_rep=1, maxeval=2, ranseed=1234, xtol_rel=1e-2, ftol_rel=1e-4)
   ############ A ENLEVER #######################################
   
   optim_options$out_dir <- file.path(out_dir,"Iteration3")
@@ -311,6 +323,18 @@ if (is.null(res_it3)) {
 }  
   
 
+## Display Total time
+cat("----------------------\n")
+cat(paste("Total time of parameter estimation process:\n"))
+cat(paste("    Iteration 1:", sum(sapply(res_it1,`[[`,"total_time"))/3600, "hours elapsed\n"))
+cat(paste("    Iteration 2:", res_it2$total_time/3600, "hours elapsed\n"))
+cat(paste("    Iteration 3:", res_it3$total_time/3600, "hours elapsed\n"))
+cat(paste("    Total:", 
+          (sum(sapply(res_it1,`[[`,"total_time"))+res_it2$total_time+res_it3$total_time)/3600, 
+          "hours elapsed\n"))
+cat("----------------------\n")
+
+
 ## Generating diagnostics and results files using CroPlotR
 
 suffix <- NULL
@@ -319,4 +343,4 @@ template_path <- file.path(here(),"data",paste0("cal_4_results_",test_case,suffi
 generate_results_files(group, model_options,  
                        complem_info, res_it2, res_it3,
                        sitNames_corresp, sim_final, obs, 
-                       template_path, out_dir, test_case, variety)
+                       template_path, out_dir, test_case, variety, varNames_corresp)
