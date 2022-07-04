@@ -41,12 +41,14 @@ generate_results_files <- function(group, model_options,
   
   # Table6
   model_error_sd <- complem_info$it2$weight
+  tmp <- NULL
   for (var in obs$obsVar_used) {  # convert from model units to obs units
     varSim <- varNames_corresp[[var]]
     units(model_error_sd[[varSim]]) <- simVar_units[[varSim]]
     units(model_error_sd[[varSim]]) <- obs$obsVar_units[[var]]
+    tmp <- c(tmp,setNames(model_error_sd[[varSim]], nm=var))
   }
-  Table6 <- data.frame(Variables=obs$obsVar_used, `Estimated sd of model error`=as.numeric(model_error_sd))
+  Table6 <- data.frame(Variables=names(tmp), `Estimated sd of model error`=as.numeric(tmp))
   save_table(table=Table6, table_name="Table6", path=out_dir)
   
   # Table7
@@ -55,12 +57,14 @@ generate_results_files <- function(group, model_options,
   
   # Table8
   model_error_sd <- complem_info$it3$weight
+  tmp <- NULL
   for (var in obs$obsVar_used) {  # convert from model units to obs units
     varSim <- varNames_corresp[[var]]
     units(model_error_sd[[varSim]]) <- simVar_units[[varSim]]
     units(model_error_sd[[varSim]]) <- obs$obsVar_units[[var]]
+    tmp <- c(tmp,setNames(model_error_sd[[varSim]], nm=var))
   }
-  Table8 <- data.frame(Variables=obs$obsVar_used, `Estimated sd of model error`=as.numeric(model_error_sd))
+  Table8 <- data.frame(Variables=names(tmp), `Estimated sd of model error`=as.numeric(tmp))
   save_table(table=Table8, table_name="Table8", path=out_dir)
   
   # Table9
@@ -68,19 +72,22 @@ generate_results_files <- function(group, model_options,
   save_table(table=Table9, table_name="Table9", path=out_dir)
   
   # Table10
+  
   sim_list_transformed <- apply_transform_var(sim_final$sim_list, transform_var)
+  obs_transformed <- apply_transform_var(obs$converted_obs_list, transform_var)
   rmse_final <- setNames(
-    summary(sim_list_transformed, obs=obs$converted_obs_list, stats = c("RMSE"))$RMSE,
-    nm=summary(sim_list_transformed, obs=obs$converted_obs_list, stats = c("RMSE"))$variable)
+    summary(sim_list_transformed, obs=obs_transformed, stats = c("RMSE"))$RMSE,
+    nm=summary(sim_list_transformed, obs=obs_transformed, stats = c("RMSE"))$variable)
   rmse_final <- tibble::tibble(!!!rmse_final)
+  tmp <- NULL
   for (var in obs$obsVar_used) {  # convert from model units to obs units
     varSim <- varNames_corresp[[var]]
     units(rmse_final[[varSim]]) <- simVar_units[[varSim]]
     units(rmse_final[[varSim]]) <- obs$obsVar_units[[var]]
+    tmp <- c(tmp,setNames(rmse_final[[varSim]], nm=var))
   }
-  Table10 <- data.frame(Variables=obs$obsVar_used, `Estimated sd of model error`=as.numeric(rmse_final))
+  Table10 <- data.frame(Variables=names(tmp), `Estimated sd of model error`=as.numeric(tmp))
   save_table(table=Table10, table_name="Table10", path=out_dir)
-  
   
   # Generate cal_4_results_* files
   generate_cal_results(sim_final, obs, sitNames_corresp, 
