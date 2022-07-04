@@ -16,10 +16,15 @@ load_protocol <- function(protocol_path) {
   sitNames_corresp <- setNames(object = sitNames_corresp_df$`Situation Name`, 
                                nm = sitNames_corresp_df$Number)
   
-  varNames_corresp_df <- read_excel(xls_path, sheet = grep(tolower("variables"),sheets)) %>%
+  variables_df <- read_excel(xls_path, sheet = grep(tolower("variables"),sheets)) 
+  varNames_corresp_df <- variables_df %>%
     filter(`Name of the simulated variable`!="NA",`Name of the simulated variable`!="na")
   varNames_corresp <- setNames(object = varNames_corresp_df$`Name of the simulated variable`, 
                                nm = varNames_corresp_df$`Name of the observed variable`)
+  
+  tmp <- variables_df %>% filter(`Group for calibration` != "NA")
+  obsVar_group <- setNames(object = tmp$`Group for calibration`, 
+                        nm = tmp$`Name of the observed variable`)
   
   simVar_units <- setNames(object = varNames_corresp_df$`Unit of the simulated variable`, 
                            nm = varNames_corresp_df$`Name of the simulated variable`)
@@ -70,14 +75,14 @@ load_protocol <- function(protocol_path) {
     if (length(res$candidates)==0) 
       res$candidates <- NULL
     return(res)})
-  names(group) <- unique(tolower(additive_params_df$group))
+  names(group) <- unique(additive_params_df$group)
   
   return(list(sitNames_corresp=sitNames_corresp, 
               varNames_corresp=varNames_corresp, 
               simVar_units=simVar_units, 
               param_info=param_info, 
               forced_param_values=forced_param_values, 
-              group=group))
+              group=group, obsVar_group=obsVar_group))
 }
 
 check_protocol <- function(protocol_path) {
