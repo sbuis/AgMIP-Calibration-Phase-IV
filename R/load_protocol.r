@@ -5,7 +5,7 @@ load_protocol <- function(protocol_path) {
   #   - varNames_corresp: correspondance between simulated and observed variables names
   #   - simVar_units: units of simulated variables
   #   - param_info: bounds of parameters to estimate
-  #   - forced_param_values: default values of parameters to estimate and equality constraints to compute
+  #   - forced_param_values: default values of parameters to estimate and parameters to set to compute
   #   - group: list of almost additive and candidate parameters to estimate
   
   check_protocol(protocol_path)
@@ -20,11 +20,11 @@ load_protocol <- function(protocol_path) {
   varNames_corresp_df <- variables_df %>%
     filter(`Name of the simulated variable`!="NA",`Name of the simulated variable`!="na")
   varNames_corresp <- setNames(object = varNames_corresp_df$`Name of the simulated variable`, 
-                               nm = varNames_corresp_df$`Name of the observed variable`)
+                               nm = varNames_corresp_df$`Name of the observed or required variable`)
   
   tmp <- variables_df %>% filter(`Group for calibration` != "NA")
   obsVar_group <- setNames(object = tmp$`Group for calibration`, 
-                        nm = tmp$`Name of the observed variable`)
+                        nm = tmp$`Name of the observed or required variable`)
   
   simVar_units <- setNames(object = varNames_corresp_df$`Unit of the simulated variable`, 
                            nm = varNames_corresp_df$`Name of the simulated variable`)
@@ -53,12 +53,12 @@ load_protocol <- function(protocol_path) {
     as.list(setNames(object = candidate_params_df$`default value`,
                                   nm = candidate_params_df$`name of the parameter`))
   )
-  if (any(grepl(tolower("equality constraints"),sheets))) {
+  if (any(grepl(tolower("parameters to set"),sheets))) {
     constraints_df <- read_excel(xls_path, 
-                                 sheet = grep(tolower("equality constraints"),sheets))
+                                 sheet = grep(tolower("parameters to set"),sheets))
     forced_param_values <- c(
       forced_param_values,
-      as.list(setNames(object = constraints_df$`formula`,
+      as.list(setNames(object = constraints_df$`value or formula`,
                        nm = constraints_df$`name of the parameter`))
     )
   }
@@ -91,16 +91,16 @@ check_protocol <- function(protocol_path) {
   
   sheets <- excel_sheets(xls_path)
   expected_sheets <- c("variables", "almost additive parameters", "candidate parameters", 
-                       "equality constraints", "situation names")
+                       "parameters to set", "situation names")
   if (!all(sapply(sheets, function(x) {tolower(x) %in% tolower(expected_sheets)})))
     stop(paste0("Sheet(s) \"",paste(setdiff(tolower(expected_sheets), tolower(sheets)),collapse = "\", \""),
                 "\" not found in ",xls_path,"\nPlease add it (them)."))
   
   expected_cols_ls <- list(
-    `variables`=c("Name of the observed variable", "Name of the simulated variable"),
+    `variables`=c("Name of the observed or required variable", "Name of the simulated variable"),
     `almost additive parameters`=c("name of the parameter", "group", "default value", "lower bound", "upper bound"),
     `candidate parameters`=c("name of the parameter", "group", "default value", "lower bound", "upper bound"),
-    `equality constraints`=c("name of the parameter", "formula"),
+    `parameters to set`=c("name of the parameter", "value or formula"),
     `situation names`=c("Number", "Situation Name")
   )
   invisible(
