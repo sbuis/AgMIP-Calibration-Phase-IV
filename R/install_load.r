@@ -28,6 +28,11 @@ install_load <- function() {
     devtools::install_github("SticsRPacks/CroPlotR@*release")
     library("CroPlotR")
   }
+  if(!require("rstudioapi")){
+    install.packages("rstudioapi")
+    library("rstudioapi")
+  }
+   
   
   invisible(lapply(list.files(file.path(here(),"R"), full.names=TRUE), function(x) source(x)))
   

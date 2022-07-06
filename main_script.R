@@ -6,6 +6,9 @@ if(!require("here")){
 source(file.path(here(),"R/install_load.r"))
 install_load()
 
+# DEBUG mode (set to TRUE to limit the number of situations, repetitions and evaluations, FALSE otherwise)
+debug <- TRUE
+
 # Define the test case ("French" or "Australian") and variety (only used for French dataset)
 # test_case <- "French"
 # variety <- "Bermude"  # "Apache" or "Bermude"
@@ -87,20 +90,21 @@ obs_unit_path <- file.path(here(),"data",paste0("cal_4_obs_",test_case,"_units.c
 obs <- load_obs(obs_data_path, obs_unit_path, varNames_corresp, 
                 sitNames_corresp, simVar_units, obsVar_group)
 
-######## A ENLEVER !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# if (test_case=="French") {
-#   obs$converted_obs_list <- filter_obs(obs$converted_obs_list, 
-#                            situation = c("MERY-Be-14-126416", "MERY-Be-11-119630",
-#                                          "MERY-Be-15-128539"), 
-#                            include=TRUE)
-# } else {
-#   obs$converted_obs_list <- filter_obs(obs$converted_obs_list, 
-#                                        situation = c("Lake-2011-TOS2", "Minn-2011-TOS3",
-#                                                      "Erad-2010-TOS1"), 
-#                                        include=TRUE)
-# }
-######## A ENLEVER !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
+nb_rep_it1 <- c(20,5)
+nb_rep_it2 <- 20
+nb_rep_it3 <- 20
+maxeval=5000
+if (debug) {
+  cat("Debug mode")
+  sit_list <- names(obs$converted_obs_list)[1:6]
+  obs$converted_obs_list <- filter_obs(obs$converted_obs_list,
+                                       situation = sit_list,
+                                       include=TRUE)
+  nb_rep_it1 <- c(2,2)
+  nb_rep_it2 <- 2
+  nb_rep_it3 <- 2
+  maxeval=3
+}
 
 ######## A ENLEVER !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 if ("variete" %in% names(forced_param_values)) {
@@ -125,8 +129,7 @@ cat("\n----- Parameter estimation Iteration 1\n")
 cat("--------------------------------------\n")
 
 ############ A ENLEVER #######################################
-optim_options=list(nb_rep=c(15,5), maxeval=5000, ranseed=1234, xtol_rel=1e-2, ftol_rel=1e-4)
-# optim_options=list(nb_rep=c(1,1), maxeval=2, ranseed=1234, xtol_rel=1e-2, ftol_rel=1e-4)
+optim_options=list(nb_rep=nb_rep_it1, maxeval=maxeval, ranseed=1234, xtol_rel=1e-2, ftol_rel=1e-4)
 ############ A ENLEVER #######################################
 
 transform_var <- eval(parse(text=paste0("c(",varNames_corresp[["Biomass"]],
@@ -189,9 +192,7 @@ cat("\n----- Parameter estimation Iteration 2\n")
 cat("--------------------------------------\n")
 
 ############ A ENLEVER #######################################
-# optim_options=list(nb_rep=2, maxeval=15, ranseed=1234)
-optim_options=list(nb_rep=15, maxeval=5000, ranseed=1234, xtol_rel=1e-2, ftol_rel=1e-4)
-# optim_options=list(nb_rep=1, maxeval=2, ranseed=1234, xtol_rel=1e-2, ftol_rel=1e-4)
+optim_options=list(nb_rep=nb_rep_it2, maxeval=maxeval, ranseed=1234, xtol_rel=1e-2, ftol_rel=1e-4)
 ############ A ENLEVER #######################################
 
 final_params <- unlist(lapply(res_it1, function(x) names(x$final_values)))
@@ -259,7 +260,7 @@ if (is.null(res_it2)) {
 
 
 
-## Parameter Estimation, Third iteration
+# Parameter Estimation, Third iteration
 
 cat("\n----- Parameter estimation Iteration 3\n")
 cat("--------------------------------------\n")
@@ -267,9 +268,7 @@ cat("--------------------------------------\n")
 if (is.null(res_it3)) {
   
   ############ A ENLEVER #######################################
-  # optim_options=list(nb_rep=2, maxeval=15, ranseed=1234)
-  optim_options=list(nb_rep=15, maxeval=5000, ranseed=1234, xtol_rel=1e-2, ftol_rel=1e-4)
-  # optim_options=list(nb_rep=1, maxeval=2, ranseed=1234, xtol_rel=1e-2, ftol_rel=1e-4)
+  optim_options=list(nb_rep=nb_rep_it3, maxeval=maxeval, ranseed=1234, xtol_rel=1e-2, ftol_rel=1e-4)
   ############ A ENLEVER #######################################
   
   optim_options$out_dir <- file.path(out_dir,"Iteration3")
@@ -323,7 +322,23 @@ if (is.null(res_it3)) {
 }  
   
 
-## Display Total time
+# Generating diagnostics and results files using CroPlotR
+
+suffix <- NULL
+if (test_case=="French") suffix <- paste0("_",variety) 
+template_path <- file.path(here(),"data",paste0("cal_4_results_",test_case,suffix,"_numerical_modelName_contact_person.txt"))
+generate_results_files(group, model_options,  
+                       complem_info, res_it2, res_it3,
+                       sitNames_corresp, sim_final, obs, 
+                       template_path, out_dir, test_case, variety, varNames_corresp)
+
+
+# Copying script and protocol files in result folder
+file.copy(from=xls_path, to=out_dir, overwrite = TRUE)
+file.copy(from=getSourceEditorContext()$path, to=out_dir, overwrite = TRUE)
+
+
+# Displaying Total time
 cat("----------------------\n")
 cat(paste("Total time of parameter estimation process:\n"))
 cat(paste("    Iteration 1:", sum(sapply(res_it1,`[[`,"total_time"))/3600, "hours elapsed\n"))
@@ -335,12 +350,11 @@ cat(paste("    Total:",
 cat("----------------------\n")
 
 
-## Generating diagnostics and results files using CroPlotR
+if (debug) {
+  cat("----------------------\n")
+  cat("WARNING: the protocol has been applied in DEBUG mode on a sublist of situations and with limited number of repetitions and evaluations.")
+  cat("set debug to FALSE in the main script to disable DEBUG mode.")
+  cat("----------------------\n")
+}
 
-suffix <- NULL
-if (test_case=="French") suffix <- paste0("_",variety) 
-template_path <- file.path(here(),"data",paste0("cal_4_results_",test_case,suffix,"_numerical_modelName_contact_person.txt"))
-generate_results_files(group, model_options,  
-                       complem_info, res_it2, res_it3,
-                       sitNames_corresp, sim_final, obs, 
-                       template_path, out_dir, test_case, variety, varNames_corresp)
+
