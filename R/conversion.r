@@ -28,8 +28,19 @@ rename_var <- function(simobs, corresp, invert=FALSE) {
     corresp <- tmp
   }
   for (sit in names(simobs)) {
-    simobs[[sit]][,names(corresp)] <- simobs[[sit]][,corresp] 
-    simobs[[sit]] <- select(simobs[[sit]], -all_of(corresp))
+    to_remove <- NULL
+    for (new_varName in names(corresp)) {
+      if (corresp[new_varName] %in% names(simobs[[sit]])) {
+        simobs[[sit]][,new_varName] <- simobs[[sit]][,corresp[new_varName]]
+        to_remove <- c(to_remove,corresp[new_varName])
+      }
+    }
+    simobs[[sit]] <- select(simobs[[sit]], -all_of(to_remove))
+    # old_varNames <- intersect(names(simobs[[sit]]), corresp)
+    # if (length(old_varNames)>0) {
+    #   new_varNames <- names(corresp)[match(old_varNames,corresp)]
+    #   simobs[[sit]][,new_varNames] <- simobs[[sit]][,old_varNames] 
+    # }
   }
   return(simobs)
 }
