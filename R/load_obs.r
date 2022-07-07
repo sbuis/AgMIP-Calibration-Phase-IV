@@ -2,10 +2,10 @@ load_obs <- function(obs_data_path, obs_unit_path, varNames_corresp,
                      sitNames_corresp, simVar_units, obsVar_group) {
   
   obs_df <- read.table(file=obs_data_path, header = TRUE, stringsAsFactors = FALSE)
+  obs_df <- select_if(obs_df, ~!all(is.na(.))) # remove columns with just NAs
   obs_units <- read.table(file=obs_unit_path, header = TRUE, stringsAsFactors = FALSE, 
                           sep=";", strip.white=TRUE)
   
-  # obsVar_names <- obs_units$Column.name
   obsVar_names <- setdiff(names(obs_df),c("Number","Site","HarvestYear","SowingDate", "Variety","Date"))
   obsVar_units <- setNames(obs_units$Unit, nm = obs_units$Column.name)
   if ("Date_*" %in% names(obsVar_units)) {
@@ -21,20 +21,9 @@ load_obs <- function(obs_data_path, obs_unit_path, varNames_corresp,
   ## Change the def. of their units
   obsVar_units[grep("Date",names(obsVar_units))] <- "d"
   
-  
-  obsVar_groups <- tolower(obs_units$Group[!is.na(obs_units$Group)])
   obsVar_used <- intersect(intersect(obsVar_names, names(varNames_corresp)), 
                             names(obsVar_group))
-  
-  # Check coherency between varNames_corresp and obs names
-  if (!all(names(varNames_corresp) %in% obsVar_names)) 
-    stop(paste0("Incorrect names for the observed variables. ",
-                "Please check that the names of observed variables defined in the \"variables\" sheet of the protocol description xls file are identical to these listed in the observation units file:",
-                obs_unit_path,"\n",
-                paste(setdiff(names(varNames_corresp), obsVar_names), collapse = ","), 
-                " are listed in the protocol description xls file but not in the observation unit file.\n",
-                "List of variables included in the observation unit file: ",
-                paste(obsVar_names, collapse = ",")))
+  # TODO: Remove intersection with names(obsVar_group) if HarvestDate is removed to the observations.
   
   # Transform observed dates of phenological stages in julian days from 31/12/(sowing year-1)
   ###################################################################################
@@ -60,7 +49,7 @@ load_obs <- function(obs_data_path, obs_unit_path, varNames_corresp,
   }
   
   # Add units
-  for (var in intersect(names(obs_df), obsVar_used)) {
+  for (var in obsVar_used) {
     units(obs_df[[var]]) <- obsVar_units[var]
   }
   
@@ -72,19 +61,9 @@ load_obs <- function(obs_data_path, obs_unit_path, varNames_corresp,
   # obs_df$Date <- as.Date(obs_df$Date, format = "%d/%m/%Y")
   obs_df$Date <- as.POSIXct(obs_df$Date, format = "%d/%m/%Y", tz = "UTC")
   
-  # Check coherency between obs data file and obs units file 
-  if (!all(obsVar_names %in% names(obs_df)))
-    stop(paste0("Obs data file and obs units file are not coherent. ",
-                "Please check that all variables included in obs units file are also included in the obs data file.\n",
-                paste(setdiff(obsVar_names, names(obs_df)), collapse = ","), 
-                " included in obs units file ",obs_unit_path," but not in obs data file ",
-                obs_data_path,".\n"))
-  
   # Only keep the observed variables that will be used 
   obs_df <- select(obs_df, c("Situation", "Date", all_of(obsVar_used)))
-  # or select all observed variables ?
-  # obs_df <- select(obs_df, c("Situation", "Date", all_of(obsVar_names)))
-  
+
   # Transform into CroptimizR format
   obs_list <- split(obs_df, obs_df$Situation)
   obs_list <- lapply(obs_list, function(x) select(x,-Situation))
@@ -102,6 +81,6 @@ load_obs <- function(obs_data_path, obs_unit_path, varNames_corresp,
   
   return(list(obs_list=obs_list, converted_obs_list=converted_obs_list, 
               obsVar_names=obsVar_names, obsVar_units=obsVar_units, 
-              obsVar_groups=obsVar_groups, obsVar_used=obsVar_used))
+              obsVar_used=obsVar_used))
 
 }

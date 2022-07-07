@@ -30,27 +30,11 @@ model_options= stics_wrapper_options(javastics=javastics_path, workspace = data_
 # Set-up output results folder
 out_dir <- file.path(here(),"results",test_case,variety)
 
-# Load the protocol description provided by the user (xls file) 
-if (test_case=="French") {
-  xls_path <- file.path(here(),"data",paste0("protocol_descr_french_",variety,".xlsx"))
-} else {
-  xls_path <- file.path(here(),"data","protocol_descr_australian.xlsx")
-}
-
-############################# A ENLEVER ########################
-# xls_path <- file.path(here(),"data","protocol_descr_french_Bermude_TEST.xlsx")
-
-
-protocol_descr <- load_protocol(xls_path)
-sitNames_corresp <- protocol_descr$sitNames_corresp 
-varNames_corresp <- protocol_descr$varNames_corresp 
-simVar_units <- protocol_descr$simVar_units 
-param_info <- protocol_descr$param_info
-forced_param_values <- protocol_descr$forced_param_values 
-group <- protocol_descr$group # liste of params to estimate per group
-obsVar_group <- protocol_descr$obsVar_group # groups of observed variables used in the calibration
-
-# In this example, N_in_biomassHarvest is not direclty computed by the model.
+# Define model output transformation(s) if necessary.
+# Useful if one (or several) observed variable is not directly comparable to a 
+# simulated one but if one can compute an equivalent from the simulated variables.
+# In the following example, N_in_biomassHarvest (observed in French dataset) is not 
+# directly computed by the model.
 # The model simulates a variable, called QNplante, which is the N in biomass in kg ha-1, 
 # and the biomass, called masec_n, in t ha-1.
 # The model results must thus be explicitly transformed to compute N_in_biomassHarvest in %,
@@ -79,8 +63,20 @@ if (test_case=="French") {
   
 }
 
-# Check information given by the user
-check_user_inputs(simVar_units, varNames_corresp, transform_outputs)
+# Load the protocol description provided by the user (xls file) 
+if (test_case=="French") {
+  xls_path <- file.path(here(),"data",paste0("protocol_descr_french_",variety,".xlsx"))
+} else {
+  xls_path <- file.path(here(),"data","protocol_descr_australian.xlsx")
+}
+protocol_descr <- load_protocol(xls_path, transform_outputs)
+sitNames_corresp <- protocol_descr$sitNames_corresp 
+varNames_corresp <- protocol_descr$varNames_corresp 
+simVar_units <- protocol_descr$simVar_units 
+param_info <- protocol_descr$param_info
+forced_param_values <- protocol_descr$forced_param_values 
+param_group <- protocol_descr$param_group # list of params to estimate per group
+obsVar_group <- protocol_descr$obsVar_group # groups of observed variables used in the calibration
 
 # Load the observations
 suffix <- NULL
@@ -90,35 +86,77 @@ obs_unit_path <- file.path(here(),"data",paste0("cal_4_obs_",test_case,"_units.c
 obs <- load_obs(obs_data_path, obs_unit_path, varNames_corresp, 
                 sitNames_corresp, simVar_units, obsVar_group)
 
+obs_list <- obs$obs_list  # list of observation as defined in the observation file
+obsVar_names <- obs$obsVar_names # Names of the observed variables as defined in the observation file
+obsVar_units <- obs$obsVar_units # Units of the observed variables as defined in the observation file
+obsVar_used <- obs$obsVar_used # NAmes of the observed variables used in the current protocol application
+converted_obs_list <- obs$converted_obs_list # list of observation in th emodel space (i.e. with name of situation and variables as in the model_wrapper, and units as defined in model outputs)
+
+# Get the list of variables for which the user must provide 
+# results in the cal_4_results_***.txt file)
+template_path <- file.path(here(),"data",paste0("cal_4_results_",test_case,suffix,"_numerical_modelName_contact_person.txt"))
+template_df <- read.table(template_path,
+                          header = TRUE, stringsAsFactors = FALSE)
+resVar_names <- setdiff(names(template_df),c("Number","Site","HarvestYear",
+                                             "Date_sowing", "SowingDate", 
+                                             "Variety","Date"))
+
+## Check that the list of "observed and required variables" as defined in the protocol 
+## description xls file is included in the union of observed and required variables
+## as they are defined in the cal_4_obs and cal_4_reslts files.
+if (!all(names(varNames_corresp) %in% unique(c(obsVar_names, resVar_names)))) 
+  stop(paste0("Unknown variable(s) ",
+              paste(setdiff(names(varNames_corresp), unique(c(obsVar_names, resVar_names))), collapse = ","), 
+              "\nPlease modify sheet \"variables\", column \"Name of the observed or required variable\" of the file:\n",
+              protocol_path,
+              "\nThe variables included in this column must be included in the list of variables defined in files:\n",
+              template_path, "\nand\n",obs_data_path))
+
+# Compute the list of required variables in output of the wrapper
+# (list of variables for which there is a correspondance with observed and results variables + 
+#  transform_inputs - transform_outputs)
+reqVar_Wrapper <- setdiff(c(varNames_corresp,transform_inputs),transform_outputs)
+
+
+# Define number of repetitions and evaluations
 nb_rep_it1 <- c(20,5)
 nb_rep_it2 <- 20
 nb_rep_it3 <- 20
 maxeval=5000
+
+# In debug mode reduce number of evaluations, situations, repetitions, candidate parameters, ...
 if (debug) {
   cat("Debug mode")
-  sit_list <- names(obs$converted_obs_list)[1:6]
-  obs$converted_obs_list <- filter_obs(obs$converted_obs_list,
+  sit_list <- names(converted_obs_list)[1:6]
+  converted_obs_list <- filter_obs(converted_obs_list,
                                        situation = sit_list,
                                        include=TRUE)
+  for (gr in names(param_group)) { # only keep the 1st candidate
+    if (!is.null(param_group[[gr]]$candidates)) 
+      param_group[[gr]]$candidates <- param_group[[gr]]$candidates[1]
+  }
   nb_rep_it1 <- c(2,2)
   nb_rep_it2 <- 2
   nb_rep_it3 <- 2
   maxeval=3
 }
 
-######## A ENLEVER !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+######## A ENLEVER, uniquement pour STICS ...  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 if ("variete" %in% names(forced_param_values)) {
   forced_param_values <- forced_param_values[c("variete",setdiff(names(forced_param_values),"variete"))]
 }
 ######## A ENLEVER !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+# Save configuration
+save.image(file=file.path(out_dir,"config.Rdata"))
 
+
+# Initialize some local variables 
 flag_checkpoint <- FALSE
 igr <- 0
 res_it1 <- list(); res_it1_tmp <- NULL; res_it2 <- NULL; res_it3 <- NULL
 weight_it2 <- NULL; weight_it3 <- NULL
 complem_info <- list(it1=list(), it2=list(), it3=list())
-# crt_forced_param_values <- forced_param_values
 
 if (file.exists(file.path(out_dir,"checkpoint.Rdata"))) load(file.path(out_dir,"checkpoint.Rdata"))
 
@@ -128,49 +166,48 @@ if (file.exists(file.path(out_dir,"checkpoint.Rdata"))) load(file.path(out_dir,"
 cat("\n----- Parameter estimation Iteration 1\n")
 cat("--------------------------------------\n")
 
-############ A ENLEVER #######################################
 optim_options=list(nb_rep=nb_rep_it1, maxeval=maxeval, ranseed=1234, xtol_rel=1e-2, ftol_rel=1e-4)
-############ A ENLEVER #######################################
 
 transform_var <- eval(parse(text=paste0("c(",varNames_corresp[["Biomass"]],
                                         "=function(x) log(x+.Machine$double.xmin))")))
-wrapper_outputs <- setdiff(c(names(simVar_units),transform_inputs),transform_outputs)
 
 crt_forced_param_values <- forced_param_values
-while (igr < length(group)) {
+while (igr < length(param_group)) {
   
   igr <- igr+1
-  gr <- names(group)[igr]
+  gr <- names(param_group)[igr]
   cat(paste("\n---------------- Group",gr,"\n"))
   
   ## Filter observations to use for the current group
-  crt_var_list <- varNames_corresp[intersect(obs$obsVar_used,
+  crt_var_list <- varNames_corresp[intersect(obsVar_used,
                                              names(obsVar_group)[grep(gr, obsVar_group)])]
-  crt_obs_list <- filter_obs(obs_list=obs$converted_obs_list, var=crt_var_list, include=TRUE)
+  crt_obs_list <- filter_obs(obs_list=converted_obs_list, var=crt_var_list, include=TRUE)
   
   ## Filter information on the parameters to estimate for the current group
-  crt_params <- c(group[[gr]]$obligatory, group[[gr]]$candidates)
+  crt_params <- c(param_group[[gr]]$obligatory, param_group[[gr]]$candidates)
   crt_param_info <- lapply(param_info,function(x) x[crt_params])
 
   optim_options$out_dir <- file.path(out_dir,"Iteration1",paste0("group_",gr))
   
-  ## Define parameters to force
+  ## Define parameters to force (estimated values for the parameters previously selected,
+  ##                            default values for the others, exclude the current candidate 
+  ##                            parameters)
   if (!is.null(res_it1_tmp)) {
     param_to_add <- setdiff(names(forced_param_values), names(crt_forced_param_values))
     crt_forced_param_values <- c(forced_param_values[param_to_add], crt_forced_param_values)
     crt_forced_param_values[names(res_it1_tmp$final_values)] <- res_it1_tmp$final_values
   }
-  crt_forced_param_values[group[[gr]]$obligatory] <- NULL
+  crt_forced_param_values[param_group[[gr]]$obligatory] <- NULL
   
   res_it1_tmp <- estim_param(obs_list=crt_obs_list, 
                      crit_function = crit_ols,
                      model_function=stics_wrapper,
                      model_options=model_options,
                      optim_options=optim_options,
-                     param_info=crt_param_info, candidate_param=group[[gr]]$candidates,
+                     param_info=crt_param_info, candidate_param=param_group[[gr]]$candidates,
                      forced_param_values=crt_forced_param_values, 
                      transform_var=transform_var,
-                     transform_sim=transform_sim, var=wrapper_outputs)
+                     transform_sim=transform_sim, var=reqVar_Wrapper)
   
   res_it1[[gr]] <- res_it1_tmp
   
@@ -178,7 +215,8 @@ while (igr < length(group)) {
        file = file.path(out_dir,paste0("checkpoint_it1_gr",igr,".Rdata")))
   
   complem_info$it1[[gr]] <- list(forced_param_values=unlist(crt_forced_param_values),
-                                 obsVar_used=crt_var_list)
+                                 obsVar_used=crt_var_list,
+                                 crt_obs_list=crt_obs_list)
   save(complem_info, 
        file = file.path(out_dir,paste0("complementary_info.Rdata")))
   
@@ -191,17 +229,18 @@ while (igr < length(group)) {
 cat("\n----- Parameter estimation Iteration 2\n")
 cat("--------------------------------------\n")
 
-############ A ENLEVER #######################################
 optim_options=list(nb_rep=nb_rep_it2, maxeval=maxeval, ranseed=1234, xtol_rel=1e-2, ftol_rel=1e-4)
-############ A ENLEVER #######################################
 
+# List of parameters to estimate as selected in iteration 1
 final_params <- unlist(lapply(res_it1, function(x) names(x$final_values)))
 est_values_it1 <- setNames(object=unlist(lapply(res_it1, function(x) x$final_values)),
                            nm=final_params)
 final_param_info <- lapply(param_info,function(x) x[final_params])
+
+# Use estimated values of iteration 1 as initial values for 1st repetition
 final_param_info$init_values <- est_values_it1
 
-## Define parameters to force
+## Define parameters to force (defaults values for all non-selected parameters)
 final_forced_param_values <- forced_param_values[setdiff(names(forced_param_values),
                                                          final_params)]
 
@@ -209,10 +248,11 @@ if (is.null(res_it2)) {
  
   optim_options$out_dir <- file.path(out_dir,"Iteration2")
 
+  # Run model wrapper using parameter values estimated in iteration 1 to weight the minimized criterion
   sim_it1 <- run_wrapper(model_options=model_options,
                          param_values=c(res_it1$final_values, final_forced_param_values),
-                         situation=sitNames_corresp, var=wrapper_outputs, 
-                         obs_list=obs$converted_obs_list,
+                         situation=sitNames_corresp, var=reqVar_Wrapper, 
+                         obs_list=converted_obs_list,
                          transform_sim=transform_sim, transform_var=transform_var)
 
   #########################
@@ -226,6 +266,7 @@ if (is.null(res_it2)) {
 
   # filtrer sur les variables phenos pour faire la somme des SSE
 
+  # Define the criterion to minimize
   crit_function <- function(sim_list, obs_list) {
     weight <- setNames(
       summary(sim_it1$sim_list, obs=obs_list, stats = c("RMSE"))$RMSE,
@@ -237,7 +278,7 @@ if (is.null(res_it2)) {
              alpha=alpha)
   }
   
-  res_it2 <- estim_param(obs_list=obs$converted_obs_list, 
+  res_it2 <- estim_param(obs_list=converted_obs_list, 
                          crit_function = crit_function,
                          model_function=stics_wrapper,
                          model_options=model_options,
@@ -245,13 +286,14 @@ if (is.null(res_it2)) {
                          param_info=final_param_info,
                          forced_param_values=final_forced_param_values,
                          transform_var=transform_var,
-                         transform_sim=transform_sim, var=wrapper_outputs)
+                         transform_sim=transform_sim, var=reqVar_Wrapper)
 
   save(res_it1, igr, res_it2, 
        file = file.path(out_dir,paste0("checkpoint_it2.Rdata")))
   
   complem_info$it2 <- list(forced_param_values=unlist(final_forced_param_values),
-                           obsVar_used=varNames_corresp[varNames_corresp %in% unlist(lapply(obs$converted_obs_list,names))],
+                           obsVar_used=varNames_corresp[varNames_corresp %in% unlist(lapply(converted_obs_list,names))],
+                           converted_obs_list=converted_obs_list,
                            weight=weight_it2)
   save(complem_info, 
        file = file.path(out_dir,paste0("complementary_info.Rdata")))
@@ -267,20 +309,21 @@ cat("--------------------------------------\n")
 
 if (is.null(res_it3)) {
   
-  ############ A ENLEVER #######################################
   optim_options=list(nb_rep=nb_rep_it3, maxeval=maxeval, ranseed=1234, xtol_rel=1e-2, ftol_rel=1e-4)
-  ############ A ENLEVER #######################################
-  
+
   optim_options$out_dir <- file.path(out_dir,"Iteration3")
 
+  # Use estimated values of iteration 2 as initial values for 1st repetition
   final_param_info$init_values <- res_it2$final_values
     
+  # Run model wrapper using parameter values estimated in iteration 2 to weight the minimized criterion
   sim_it2 <- run_wrapper(model_options=model_options,
                            param_values=c(final_forced_param_values,res_it2$final_values),
-                           situation=sitNames_corresp, var=wrapper_outputs, 
-                           obs_list=obs$converted_obs_list,
+                           situation=sitNames_corresp, var=reqVar_Wrapper, 
+                           obs_list=converted_obs_list,
                            transform_sim=transform_sim, transform_var=transform_var)
 
+  # Define the criterion to minimize
   crit_function <- function(sim_list, obs_list) {
     weight <- setNames(
       summary(sim_it2$sim_list, obs=obs_list, stats = c("RMSE"))$RMSE,
@@ -292,7 +335,7 @@ if (is.null(res_it3)) {
              alpha=alpha)
   }
   
-  res_it3 <- estim_param(obs_list=obs$converted_obs_list, 
+  res_it3 <- estim_param(obs_list=converted_obs_list, 
                          crit_function = crit_function,
                          model_function=stics_wrapper,
                          model_options=model_options,
@@ -300,13 +343,13 @@ if (is.null(res_it3)) {
                          param_info=final_param_info,
                          forced_param_values=final_forced_param_values, 
                          transform_var=transform_var,
-                         transform_sim=transform_sim, var=wrapper_outputs)
+                         transform_sim=transform_sim, var=reqVar_Wrapper)
   
   # run the model_wrapper after final optimization
   sim_final <- run_wrapper(model_options=model_options,
                            param_values=c(final_forced_param_values,res_it3$final_values),
-                           situation=sitNames_corresp, var=wrapper_outputs, 
-                           obs_list=obs$converted_obs_list,
+                           situation=sitNames_corresp, var=reqVar_Wrapper, 
+                           obs_list=converted_obs_list,
                            transform_sim=transform_sim)
   
   
@@ -314,7 +357,8 @@ if (is.null(res_it3)) {
        file = file.path(out_dir,paste0("checkpoint_it3.Rdata")))
   
   complem_info$it3 <- list(forced_param_values=unlist(final_forced_param_values),
-                           obsVar_used=varNames_corresp[varNames_corresp %in% unlist(lapply(obs$converted_obs_list,names))],
+                           obsVar_used=varNames_corresp[varNames_corresp %in% unlist(lapply(converted_obs_list,names))],
+                           converted_obs_list=converted_obs_list,
                            weight=weight_it3)
   save(complem_info, 
        file = file.path(out_dir,paste0("complementary_info.Rdata")))
@@ -326,12 +370,12 @@ if (is.null(res_it3)) {
 
 suffix <- NULL
 if (test_case=="French") suffix <- paste0("_",variety) 
-template_path <- file.path(here(),"data",paste0("cal_4_results_",test_case,suffix,"_numerical_modelName_contact_person.txt"))
-generate_results_files(group, model_options,  
+generate_results_files(param_group, model_options,  
                        complem_info, res_it2, res_it3,
-                       sitNames_corresp, sim_final, obs, 
-                       template_path, out_dir, test_case, variety, varNames_corresp)
-
+                       sitNames_corresp, sim_final, obs_list, converted_obs_list,
+                       obsVar_units, obsVar_used, 
+                       template_path, out_dir, test_case, variety, varNames_corresp,
+                       resVar_names)
 
 # Copying script and protocol files in result folder
 file.copy(from=xls_path, to=out_dir, overwrite = TRUE)
@@ -351,10 +395,10 @@ cat("----------------------\n")
 
 
 if (debug) {
-  cat("----------------------\n")
+  cat("\n----------------------\n")
   cat("WARNING: the protocol has been applied in DEBUG mode on a sublist of situations and with limited number of repetitions and evaluations.")
-  cat("set debug to FALSE in the main script to disable DEBUG mode.")
-  cat("----------------------\n")
+  cat("Set debug to FALSE in the main script to disable DEBUG mode.")
+  cat("\n----------------------\n")
 }
 
 

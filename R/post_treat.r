@@ -1,12 +1,14 @@
-generate_results_files <- function(group, model_options, 
+generate_results_files <- function(param_group, model_options, 
                                    complem_info, res_it2, res_it3,
-                                   sitNames_corresp, sim_final, obs, 
+                                   sitNames_corresp, sim_final, obs_list, converted_obs_list,
+                                   obsVar_units, obsVar_used, 
                                    template_path, out_dir, test_case, variety,
-                                   varNames_corresp) {
+                                   varNames_corresp, resVar_names) {
 
-  # Table5 
-  group_name <- names(group)
+  # Table5: list of parameters and values of SS and BIC for each group and step after iteration 1
+  group_name <- names(param_group)
   
+  ## List the results files for each group and step
   dirs <- list.dirs(file.path(out_dir,"Iteration1"))
   files <- list.files(path=dirs, pattern="optim_results.Rdata", full.names = TRUE)          
   files <- lapply(group_name, function(x) {
@@ -39,72 +41,67 @@ generate_results_files <- function(group, model_options,
   save_table(table=Table5, table_name="Table5", path=out_dir)
   
   
-  # Table6
+  # Table6: Estimated sd of model error for the observed variables used after iteration 1
   model_error_sd <- complem_info$it2$weight
   tmp <- NULL
-  for (var in obs$obsVar_used) {  # convert from model units to obs units
-    varSim <- varNames_corresp[[var]]
+  for (varSim in names(model_error_sd)) {  # convert from model units to obs units
     units(model_error_sd[[varSim]]) <- simVar_units[[varSim]]
-    units(model_error_sd[[varSim]]) <- obs$obsVar_units[[var]]
-    tmp <- c(tmp,setNames(model_error_sd[[varSim]], nm=var))
+    varObs <- names(varNames_corresp)[match(varSim,varNames_corresp)]
+    units(model_error_sd[[varSim]]) <- obsVar_units[[varObs]]
+    tmp <- c(tmp,setNames(model_error_sd[[varSim]], nm=varObs))
   }
   Table6 <- data.frame(Variables=names(tmp), `Estimated sd of model error`=as.numeric(tmp))
   save_table(table=Table6, table_name="Table6", path=out_dir)
   
-  # Table7
-  Table7 <- generate_table7_like(res_it2, group)
+  # Table7: initial and estimated values of parameters after iteration 2
+  Table7 <- generate_table7_like(res_it2, param_group)
   save_table(table=Table7, table_name="Table7", path=out_dir)
   
-  # Table8
+  # Table8: Estimated sd of model error for the observed variables used after iteration 2
   model_error_sd <- complem_info$it3$weight
   tmp <- NULL
-  for (var in obs$obsVar_used) {  # convert from model units to obs units
-    varSim <- varNames_corresp[[var]]
+  for (varSim in names(model_error_sd)) {  # convert from model units to obs units
     units(model_error_sd[[varSim]]) <- simVar_units[[varSim]]
-    units(model_error_sd[[varSim]]) <- obs$obsVar_units[[var]]
-    tmp <- c(tmp,setNames(model_error_sd[[varSim]], nm=var))
+    varObs <- names(varNames_corresp)[match(varSim,varNames_corresp)]
+    units(model_error_sd[[varSim]]) <- obsVar_units[[varObs]]
+    tmp <- c(tmp,setNames(model_error_sd[[varSim]], nm=varObs))
   }
   Table8 <- data.frame(Variables=names(tmp), `Estimated sd of model error`=as.numeric(tmp))
   save_table(table=Table8, table_name="Table8", path=out_dir)
-  
+
   # Table9
-  Table9 <- generate_table7_like(res_it3, group)
+  Table9 <- generate_table7_like(res_it3, param_group)
   save_table(table=Table9, table_name="Table9", path=out_dir)
   
-  # Table10
-  
+  # Table10: Estimated sd of model error for the observed variables used after iteration 3
+  ## Needs to compute sd in this case since it has not been computed previously
   sim_list_transformed <- apply_transform_var(sim_final$sim_list, transform_var)
-  obs_transformed <- apply_transform_var(obs$converted_obs_list, transform_var)
+  obs_transformed <- apply_transform_var(converted_obs_list, transform_var)
   rmse_final <- setNames(
     summary(sim_list_transformed, obs=obs_transformed, stats = c("RMSE"))$RMSE,
     nm=summary(sim_list_transformed, obs=obs_transformed, stats = c("RMSE"))$variable)
   rmse_final <- tibble::tibble(!!!rmse_final)
   tmp <- NULL
-  for (var in obs$obsVar_used) {  # convert from model units to obs units
-    varSim <- varNames_corresp[[var]]
+  for (varSim in names(rmse_final)) {  # convert from model units to obs units
     units(rmse_final[[varSim]]) <- simVar_units[[varSim]]
-    units(rmse_final[[varSim]]) <- obs$obsVar_units[[var]]
-    tmp <- c(tmp,setNames(rmse_final[[varSim]], nm=var))
+    varObs <- names(varNames_corresp)[match(varSim,varNames_corresp)]
+    units(rmse_final[[varSim]]) <- obsVar_units[[varObs]]
+    tmp <- c(tmp,setNames(rmse_final[[varSim]], nm=varObs))
   }
   Table10 <- data.frame(Variables=names(tmp), `Estimated sd of model error`=as.numeric(tmp))
   save_table(table=Table10, table_name="Table10", path=out_dir)
   
   # Generate cal_4_results_* files
-  generate_cal_results(sim_final, obs, sitNames_corresp, 
-                       template_path, out_dir, test_case, variety, varNames_corresp)
+  generate_cal_results(sim_final, obs_list, obsVar_units, obsVar_used, 
+                       sitNames_corresp, template_path, out_dir, test_case, 
+                       variety, varNames_corresp, resVar_names)
   
 }
 
 
-generate_cal_results <- function(sim_final, obs, sitNames_corresp, 
-                                 template_path, out_dir, test_case, variety,
-                                 varNames_corresp) {
-  
-  obs_list <- obs$obs_list
-  obsVar_names <- obs$obsVar_names
-  obsVar_units <- obs$obsVar_units
-  obsVar_used <- obs$obsVar_used
-  var_date <- names(varNames_corresp)[grepl("Date",names(varNames_corresp))]
+generate_cal_results <- function(sim_final, obs_list, obsVar_units, obsVar_used, 
+                                 sitNames_corresp, template_path, out_dir, test_case, 
+                                 variety,varNames_corresp, resVar_names) {
   
   # Convert simulations to observation space (names of situations and variables, units)
   sim_final_converted <- sim_final
@@ -124,7 +121,8 @@ generate_cal_results <- function(sim_final, obs, sitNames_corresp,
   
   # Compute stats criteria
   stats <- summary(sim_final_converted$sim_list, obs=obs_list, stats=c("MSE", "Bias2","SDSD","LCS"))
-  write.table(dplyr::select(stats,-group, -situation),file = file.path(out_dir,"stats.txt"),row.names = FALSE, quote=FALSE)
+  write.table(dplyr::select(stats,-group, -situation),
+              file = file.path(out_dir,"stats.txt"),row.names = FALSE, quote=FALSE)
   
   
   # Generate the required results file
@@ -145,20 +143,22 @@ generate_cal_results <- function(sim_final, obs, sitNames_corresp,
   } 
   
   ## Create a mask for extracting required values from simulations
+  ## The mask is equal to observed list for the situations of the calibration dataset 
+  ## + required variables at maturity for the 
+  ## situations of the evaluation dataset
   mask <- obs_list
+  mask <- lapply(mask, function(x) {x[,resVar_names] <- 0; return(x)}) # add required variables if necessary
+  mask <- lapply(mask, function(x) { # remove non-required variables
+    x[setdiff(names(x), c("Date",resVar_names))] <- NULL; return(x)
+  }) 
   for (sit in setdiff(names(sitNames_corresp),names(obs_list))) {
-    if ("Harvest_Date" %in% names(sim_final_converted$sim_list[[sit]])) {
-      harvest_jul <- tail(sim_final_converted$sim_list[[sit]]$Harvest_Date,n=1)
-    } else {
-      harvest_jul <- tail(sim_final_converted$sim_list[[sit]]$HarvestDate,n=1)
-    }
-    harvest_Date <- as.Date(as.numeric(harvest_jul),
+    jul_BBCH90 <- tail(sim_final_converted$sim_list[[sit]]$Date_BBCH90,n=1)
+    Date_BBCH90 <- as.Date(as.numeric(jul_BBCH90),
                             origin=paste0(filter(template_df_ext,Number==as.numeric(sit))["year_sowing"]-1,"-12-31"),
                             format="%Y-%m-%d")[[1]]
-    mask[[sit]] <- data.frame(Date=harvest_Date, 
-                              t(setNames(rep(0,length(obsVar_names)), nm=obsVar_names)))
+    mask[[sit]] <- data.frame(Date=Date_BBCH90, 
+                              t(setNames(rep(0,length(resVar_names)), nm=resVar_names)))
   }
-  mask <- lapply(mask, function(x) {x[,obsVar_names] <- 0; x})
   
   ## Intersect mask and simulated values
   obs_sim_list <- CroptimizR:::make_obsSim_consistent(sim_final_converted$sim_list,  
@@ -173,7 +173,9 @@ generate_cal_results <- function(sim_final, obs, sitNames_corresp,
   res_df <- left_join(res_df, select(template_df_ext, Number,
                                      setdiff(names(template_df_ext), names(res_df))), 
                       by="Number") 
+  
   ## Convert julian days in Dates
+  var_date <- names(res_df)[grepl("Date_",names(res_df))]   # TODO : change if HarvestDate is required ...
   if ("Date_sowing" %in% names(res_df)) {
     res_df <- res_df %>% 
       mutate(year_sowing=year(as.Date(Date_sowing, format = "%d/%m/%Y")),
@@ -201,9 +203,9 @@ generate_cal_results <- function(sim_final, obs, sitNames_corresp,
 
 
 
-generate_table7_like <- function(res, group) {
-  param_group <- setNames(object=sapply(strsplit(names(unlist(group)), split="[.]"), `[`)[1,], 
-                          nm=unlist(group))
+generate_table7_like <- function(res, param_group) {
+  param_group <- setNames(object=sapply(strsplit(names(unlist(param_group)), split="[.]"), `[`)[1,], 
+                          nm=unlist(param_group))
   table <- bind_rows(lapply(names(res$final_values), function(param) {
     setNames(
       tibble(param_group[param][[1]],
