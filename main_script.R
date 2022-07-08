@@ -69,6 +69,7 @@ if (test_case=="French") {
 } else {
   xls_path <- file.path(here(),"data","protocol_descr_australian.xlsx")
 }
+
 protocol_descr <- load_protocol(xls_path, transform_outputs)
 sitNames_corresp <- protocol_descr$sitNames_corresp 
 varNames_corresp <- protocol_descr$varNames_corresp 
@@ -140,12 +141,6 @@ if (debug) {
   nb_rep_it3 <- 2
   maxeval=3
 }
-
-######## A ENLEVER, uniquement pour STICS ...  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-if ("variete" %in% names(forced_param_values)) {
-  forced_param_values <- forced_param_values[c("variete",setdiff(names(forced_param_values),"variete"))]
-}
-######## A ENLEVER !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 # Save configuration
 save.image(file=file.path(out_dir,"config.Rdata"))
@@ -222,6 +217,17 @@ while (igr < length(param_group)) {
   
 }
 
+# List of parameters selected after iteration 1, estimated values and forced parameters
+final_params <- unlist(lapply(names(param_group), function(x) names(res_it1[[x]]$final_values)))
+res_it1$final_values <- setNames(object=unlist(lapply(names(param_group), 
+                                                      function(x) res_it1[[x]]$final_values)),
+                                 nm=final_params)
+last_forced_param_values <- res_it1[[names(param_group)[length(param_group)]]]$forced_param_values
+res_it1$forced_param_values <- last_forced_param_values[setdiff(names(last_forced_param_values),
+                                                                final_params)]
+save(res_it1, igr, crt_forced_param_values, 
+     file = file.path(out_dir,paste0("checkpoint_it1_final.Rdata")))
+
 
 
 # Parameter Estimation, Second iteration
@@ -232,13 +238,11 @@ cat("--------------------------------------\n")
 optim_options=list(nb_rep=nb_rep_it2, maxeval=maxeval, ranseed=1234, xtol_rel=1e-2, ftol_rel=1e-4)
 
 # List of parameters to estimate as selected in iteration 1
-final_params <- unlist(lapply(res_it1, function(x) names(x$final_values)))
-est_values_it1 <- setNames(object=unlist(lapply(res_it1, function(x) x$final_values)),
-                           nm=final_params)
+final_params <- names(res_it1$final_values)
 final_param_info <- lapply(param_info,function(x) x[final_params])
 
 # Use estimated values of iteration 1 as initial values for 1st repetition
-final_param_info$init_values <- est_values_it1
+final_param_info$init_values <- res_it1$final_values
 
 ## Define parameters to force (defaults values for all non-selected parameters)
 final_forced_param_values <- forced_param_values[setdiff(names(forced_param_values),
@@ -250,7 +254,8 @@ if (is.null(res_it2)) {
 
   # Run model wrapper using parameter values estimated in iteration 1 to weight the minimized criterion
   sim_it1 <- run_wrapper(model_options=model_options,
-                         param_values=c(res_it1$final_values, final_forced_param_values),
+                         param_values=c(res_it1$final_values, 
+                                        res_it1$forced_param_values),
                          situation=sitNames_corresp, var=reqVar_Wrapper, 
                          obs_list=converted_obs_list,
                          transform_sim=transform_sim, transform_var=transform_var)
@@ -318,7 +323,7 @@ if (is.null(res_it3)) {
     
   # Run model wrapper using parameter values estimated in iteration 2 to weight the minimized criterion
   sim_it2 <- run_wrapper(model_options=model_options,
-                           param_values=c(final_forced_param_values,res_it2$final_values),
+                           param_values=c(res_it2$final_values, res_it2$forced_param_values),
                            situation=sitNames_corresp, var=reqVar_Wrapper, 
                            obs_list=converted_obs_list,
                            transform_sim=transform_sim, transform_var=transform_var)
@@ -347,7 +352,7 @@ if (is.null(res_it3)) {
   
   # run the model_wrapper after final optimization
   sim_final <- run_wrapper(model_options=model_options,
-                           param_values=c(final_forced_param_values,res_it3$final_values),
+                           param_values=c(res_it3$final_values, res_it3$forced_param_values),
                            situation=sitNames_corresp, var=reqVar_Wrapper, 
                            obs_list=converted_obs_list,
                            transform_sim=transform_sim)
@@ -381,15 +386,23 @@ generate_results_files(param_group, model_options,
 file.copy(from=xls_path, to=out_dir, overwrite = TRUE)
 file.copy(from=getSourceEditorContext()$path, to=out_dir, overwrite = TRUE)
 
+# Displaying Results
+cat("\n----------------------\n")
+cat("Final values of estimated parameters:\n")
+print(res_it3$final_values)
+cat("\nFixed values of the other parameters:\n")
+print(res_it3$forced_param_values)
+
+cat(paste("\nResults Tables and files required in Phase IV protocol as well as detailed additional results can be found in folder:",out_dir))
 
 # Displaying Total time
-cat("----------------------\n")
-cat(paste("Total time of parameter estimation process:\n"))
-cat(paste("    Iteration 1:", sum(sapply(res_it1,`[[`,"total_time"))/3600, "hours elapsed\n"))
+cat("\nTotal time of parameter estimation process:\n")
+cat(paste("    Iteration 1:", sum(sapply(names(param_group), function(gr) res_it1[[gr]]$total_time))/3600, "hours elapsed\n"))
 cat(paste("    Iteration 2:", res_it2$total_time/3600, "hours elapsed\n"))
 cat(paste("    Iteration 3:", res_it3$total_time/3600, "hours elapsed\n"))
 cat(paste("    Total:", 
-          (sum(sapply(res_it1,`[[`,"total_time"))+res_it2$total_time+res_it3$total_time)/3600, 
+          (sum(sapply(names(param_group), function(gr) res_it1[[gr]]$total_time)) + 
+             res_it2$total_time+res_it3$total_time)/3600, 
           "hours elapsed\n"))
 cat("----------------------\n")
 
@@ -401,4 +414,10 @@ if (debug) {
   cat("\n----------------------\n")
 }
 
-
+if (flag_checkpoint) {
+  cat("\n----------------------\n")
+  cat(paste("WARNING: the protocol has been applied in RESTART mode using the file:",
+            file.path(out_dir,"checkpoint.Rdata")))
+  cat("Change the name of this file to disable RESTART mode.")
+  cat("\n----------------------\n")
+}
