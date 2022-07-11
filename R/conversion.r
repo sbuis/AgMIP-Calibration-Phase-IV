@@ -60,7 +60,14 @@ convert_units <- function(simobs, var_units) {
   # var_units=c(varName1="unit", ...)
   for (sit in names(simobs)) {
     for (var in intersect(names(simobs[[sit]]),names(var_units))) {
-      units(simobs[[sit]][[var]]) <- var_units[[var]]
+      tryCatch(
+        units(simobs[[sit]][[var]]) <- var_units[[var]],
+        error = function(cond) {
+          stop(paste("\nError converting units for variable",var,
+                     ".\nPlease look at the following error message and correct the protocol description xls file.\n\n",
+                     cond))
+        }
+      )
     }
   }
   return(simobs)
