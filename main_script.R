@@ -29,6 +29,7 @@ model_options= stics_wrapper_options(javastics=javastics_path, workspace = data_
 
 # Set-up output results folder
 out_dir <- file.path(here(),"results",test_case,variety)
+if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
 
 # Define model output transformation(s) if necessary.
 # Useful if one (or several) observed variable is not directly comparable to a 
@@ -127,7 +128,7 @@ maxeval=5000
 
 # In debug mode reduce number of evaluations, situations, repetitions, candidate parameters, ...
 if (debug) {
-  cat("Debug mode")
+  cat("\nDebug mode ...\n")
   sit_list <- names(converted_obs_list)[1:6]
   converted_obs_list <- filter_obs(converted_obs_list,
                                        situation = sit_list,
