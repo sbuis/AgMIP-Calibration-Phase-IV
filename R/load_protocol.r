@@ -112,14 +112,14 @@ check_protocol_structure <- function(protocol_path) {
   invisible(
     lapply(names(expected_cols_ls), function(x) {
       df <- read_excel(protocol_path, sheet = grep(tolower(x),sheets))
-      check_col_names(expected_cols_ls[[x]], names(df), x)
+      check_col_names(protocol_path, expected_cols_ls[[x]], names(df), x)
     }
     )
   )
   
 }
 
-check_col_names <- function(expected_cols, cols, sheet) {
+check_col_names <- function(protocol_path, expected_cols, cols, sheet) {
   # check that columns listed in `expected_cols` are included in columns listed in `cols`
   # for sheet `sheet`
   if (!all(sapply(expected_cols, function(x) {x %in% cols})))
