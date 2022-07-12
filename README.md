@@ -20,11 +20,22 @@ How to proceed?
 
 * If your model has already been interfaced with CroptimizR:
 
-  * download the repository (green button "Code")
+  * download the repository (green button "Code" => "Download zip") and unzip it.
   
-  * adapt main_script.R to your case
+  * open the R project AgMIP-Calibration-Phase-IV in RStudio
   
-  * execute main_script.R in Rstudio by setting maxeval to a low value (see comment in main_script.R) and check if everything seems fine (e.g., no error nor warning messages ...)
+  * install appropriate versions of CroptimizR and CroPlotR by executing the commands:
   
-  * execute main_script.R in Rstudio setting maxeval to a high value (>500) ... this may take some hours or days depending on the computation time needed by your model. Solutions for improving performances exist if needed (e.g. run situations in parallel in your wrapper, refer to the wrapper implementation guidelines).
+    * devtools::install_github("SticsRPacks/CroptimizR@AgMIP_phaseIV)
+    * devtools::install_github("SticsRPacks/CroPlotR@*release")
+  
+  * define the protocol_descr_****.xls files as indicated in the word document sent by the co-leaders
+  
+  * Check that your model wrapper is able to provide the simulated variables you listed in the protocol description files.
+  
+  * adapt beginning of main_script.R to your case
+  
+  * in main_script.R, set debug variable to TRUE (see at the beginning of the script) and execute main_script.R in Rstudio => check if everything seems fine (e.g., no error + look at warning messages ...)
+  
+  * when everything seems to be OK, set debug variable to FALSE and execute main_script.R in Rstudio ... this may take several days depending on the computation time needed by your model. Solutions for improving performances exist if needed (e.g. run situations in parallel in your wrapper, refer to the [wrapper implementation guidelines](https://sticsrpacks.github.io/CroptimizR/articles/Designing_a_model_wrapper.html)).
  
