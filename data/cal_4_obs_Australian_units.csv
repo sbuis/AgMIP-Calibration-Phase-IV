@@ -1,12 +1,6 @@
 Column name ;Definition;Unit;Group
-Date_BBCH10;Date of stage BBCH_10;dd/mm/yyyy;phenology
-Date_BBCH30;Date of stage BBCH_30;dd/mm/yyyy;phenology
-Date_BBCH55;Date of stage BBCH_55;dd/mm/yyyy;phenology
-Date_BBCH65;Date of stage BBCH_65;dd/mm/yyyy;phenology
-Date_BBCH71;Date of stage BBCH_71;dd/mm/yyyy;phenology
-Date_BBCH90;Date of stage BBCH_90;dd/mm/yyyy;phenology
-HarvestDate;Date of harvest;dd/mm/yyyy;phenology
+Date_*;Date of stage BBCH_*;dd/mm/yyyy;phenology
+HarvestDate;Date of harvest;dd/mm/yyyy;NA
 Grain_Biomass;Yield;kg ha-1;yield
-Biomass;Biomass at harvest;g m-2;plant biomass
-Grain_Number;grains per square metre;m-2;yield
-Wt1000_Grain;Weight of 1000 grains;g;yield
+Biomass;Biomass at harvest;kg ha-1;plant_biomass
+Grain_Number;grains per square metre;m-2;grain_number
