@@ -20,17 +20,11 @@ test_case <- "Australian"
 variety <- "Janz"
 
 # Set-up your model wrapper
-library(SticsOnR)
-library(SticsRFiles)
-model_wrapper <- stics_wrapper 
+model_wrapper <- 
 
 # Define model_options depending on your model wrapper
-javastics_path="D:\\Home\\sbuis\\Documents\\OUTILS-INFORMATIQUE\\STICS\\JavaSTICS-1.40-stics-8.50"
-data_dir= file.path("D:\\Home\\sbuis\\Documents\\PROJETS\\AgMIP\\AgMIP Calibration\\PhaseIV\\WORK\\SticsData",
-                    test_case,"TxtFiles")
-model_options= stics_wrapper_options(javastics=javastics_path, workspace = data_dir, 
-                                     parallel=TRUE, cores = 4)
-
+model_options <- 
+  
 # Set-up output results folder
 # the following lines will set it to project_path/results/test_case/variety
 # can be changed if needed
