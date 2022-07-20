@@ -121,7 +121,7 @@ if (!all(names(varNames_corresp) %in% unique(c(obsVar_names, resVar_names))))
   stop(paste0("Unknown variable(s) ",
               paste(setdiff(names(varNames_corresp), unique(c(obsVar_names, resVar_names))), collapse = ","), 
               "\nPlease modify sheet \"variables\", column \"Name of the observed or required variable\" of the file:\n",
-              protocol_path,
+              xls_path,
               "\nThe variables included in this column must be included in the list of variables defined in files:\n",
               template_path, "\nand\n",obs_data_path))
 
@@ -208,7 +208,7 @@ while (igr < length(param_group)) {
   
   res_it1_tmp <- estim_param(obs_list=crt_obs_list, 
                      crit_function = crit_ols,
-                     model_function=stics_wrapper,
+                     model_function=model_wrapper,
                      model_options=model_options,
                      optim_options=optim_options,
                      param_info=crt_param_info, candidate_param=param_group[[gr]]$candidates,
@@ -297,7 +297,7 @@ if (is.null(res_it2)) {
   
   res_it2 <- estim_param(obs_list=converted_obs_list, 
                          crit_function = crit_function,
-                         model_function=stics_wrapper,
+                         model_function=model_wrapper,
                          model_options=model_options,
                          optim_options=optim_options,
                          param_info=final_param_info,
@@ -354,7 +354,7 @@ if (is.null(res_it3)) {
   
   res_it3 <- estim_param(obs_list=converted_obs_list, 
                          crit_function = crit_function,
-                         model_function=stics_wrapper,
+                         model_function=model_wrapper,
                          model_options=model_options,
                          optim_options=optim_options,
                          param_info=final_param_info,
