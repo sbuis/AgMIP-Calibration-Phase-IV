@@ -21,11 +21,11 @@ install_load <- function() {
     library("readxl")
   }
   if(!require("CroptimizR")){
-    devtools::install_github("SticsRPacks/CroptimizR@*release")
+    devtools::install_github("SticsRPacks/CroptimizR@AgMIP_phaseIV")
     library("CroptimizR")
   }
   if(!require("CroPlotR")){
-    devtools::install_github("SticsRPacks/CroPlotR@*release")
+    devtools::install_github("SticsRPacks/CroPlotR@4018d25")
     library("CroPlotR")
   }
   if(!require("rstudioapi")){
