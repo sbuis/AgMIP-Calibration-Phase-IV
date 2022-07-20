@@ -27,7 +27,7 @@ How to proceed?
   * install appropriate versions of CroptimizR and CroPlotR by executing the commands:
   
     * devtools::install_github("SticsRPacks/CroptimizR@AgMIP_phaseIV)
-    * devtools::install_github("SticsRPacks/CroPlotR@*release")
+    * devtools::install_github("SticsRPacks/CroPlotR@4018d25")
   
   * define the protocol_descr_****.xls files as indicated in the word document sent by the co-leaders
   
