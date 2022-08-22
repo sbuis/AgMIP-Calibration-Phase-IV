@@ -23,7 +23,7 @@ generate_results_files <- function(param_group, model_options,
   Table5 <- NULL        
   for (gr in group_name) {
     
-    Table5 <- bind_rows(Table5, lapply(files[[gr]], function(x) {
+    Table_gr <- lapply(files[[gr]], function(x) {
       load(x)
       setNames(
         tibble(gr,
@@ -31,12 +31,18 @@ generate_results_files <- function(param_group, model_options,
                nrow(res$init_values),
                res$min_crit_value,
                res$BIC,
-               nrow(res$params_and_crit)),
+               nrow(res$params_and_crit),
+               ""),
         nm=c("group","name of the parameters","Number of starting values",
-             "Final SS","Final BIC", "Total number of calls to model")
+             "Final SS","Final BIC", "Total number of calls to model", 
+             "Selected steps")
       )
-    }))
+    })
+    Table_gr <- bind_rows(Table_gr)
+    Table_gr[Table_gr[,"Final BIC"]==min(Table_gr[,"Final BIC"]),"Selected steps"] <- "X"
     
+    Table5 <- bind_rows(Table5, Table_gr)
+      
   }
   save_table(table=Table5, table_name="Table5", path=out_dir)
   
