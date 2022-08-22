@@ -73,3 +73,18 @@ convert_units <- function(simobs, var_units) {
   return(simobs)
 }
 
+
+convert_and_rename <- function(sim, sitNames_corresp, simVar_units, 
+                               varNames_corresp, obsVar_units) {
+
+  if (!is.null(sitNames_corresp))
+    sim <- rename_sit(sim, sitNames_corresp, invert=FALSE)
+  sim <- set_units(sim, simVar_units)
+  sim <- rename_var(sim, varNames_corresp, invert=FALSE)
+  sim <- convert_units(sim, obsVar_units)
+  sim  <- lapply(sim ,drop_units)
+  attr(sim, "class") <- "cropr_simulation"
+  
+  return(sim)
+}
+
