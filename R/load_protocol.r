@@ -1,4 +1,4 @@
-load_protocol <- function(protocol_path, transform_outputs) {
+load_protocol <- function(protocol_path, transform_outputs, use_obs_synth=FALSE) {
   # Load the protocol description as given in xls file `protocol_path`
   # Returns:
   #   - sitNames_corresp: correspondance between situation Numbers and Names
@@ -38,6 +38,47 @@ load_protocol <- function(protocol_path, transform_outputs) {
                                    sheet = grep(tolower("almost additive parameters"),sheets))
   candidate_params_df <- read_excel(protocol_path, 
                                     sheet = grep(tolower("candidate parameters"),sheets))
+  
+  if (use_obs_synth) {
+
+    # Building true_param_values 
+    true_param_values <- c(
+      as.list(setNames(object = additive_params_df$`default value`,
+                       nm = additive_params_df$`name of the parameter`)),
+      as.list(setNames(object = candidate_params_df$`default value`,
+                       nm = candidate_params_df$`name of the parameter`))
+    )
+    if (any(grepl(tolower("parameters to set"),sheets))) {
+      constraints_df <- read_excel(protocol_path, 
+                                   sheet = grep(tolower("parameters to set"),sheets))
+      true_param_values <- c(
+        true_param_values,
+        as.list(setNames(object = constraints_df$`value or formula`,
+                         nm = constraints_df$`name of the parameter`))
+      )
+    }
+    
+    # Perturb additive_param and candidate_param values (only the 1st candidate per group)
+    # (but constrain them to be in their given bounds)
+    additive_params_df$`default value` <- runif(length(additive_params_df$`default value`), 
+                                                min=0.7, max=1.3) * 
+      additive_params_df$`default value`
+    additive_params_df <- additive_params_df %>% 
+      mutate(`default value` = case_when(`default value` > `upper bound` ~ `upper bound`, 
+                                         `default value` < `lower bound` ~ `lower bound`, 
+                                         `default value` <= `upper bound` & `default value` >= `lower bound` ~ `default value`))
+    
+    rows_to_change <- match(unique(candidate_params_df$group),
+                            candidate_params_df$group)
+    candidate_params_df$`default value`[rows_to_change] <- 
+      candidate_params_df$`default value`[rows_to_change] * 
+      runif(rows_to_change, min=0.7, max=1.3)
+    candidate_params_df <- candidate_params_df %>% 
+      mutate(`default value` = case_when(`default value` > `upper bound` ~ `upper bound`, 
+                                         `default value` < `lower bound` ~ `lower bound`, 
+                                         `default value` <= `upper bound` & `default value` >= `lower bound` ~ `default value`))
+  }
+  
   
   param_info <- list(lb=setNames(object = c(additive_params_df$`lower bound`,
                                             candidate_params_df$`lower bound`),
@@ -88,7 +129,8 @@ load_protocol <- function(protocol_path, transform_outputs) {
               simVar_units=simVar_units, 
               param_info=param_info, 
               forced_param_values=forced_param_values, 
-              param_group=param_group, obsVar_group=obsVar_group))
+              param_group=param_group, obsVar_group=obsVar_group, 
+              true_param_values=true_param_values))
 }
 
 check_protocol_structure <- function(protocol_path) {
