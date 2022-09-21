@@ -1,11 +1,11 @@
 # Run the model using the estimated values of the parameters and apply transformations 
 # if transform_sim and/or transform_var is provided.
-run_wrapper <- function(model_options, param_values, situation, var, obs_list, 
+run_wrapper <- function(model_wrapper, model_options, param_values, situation, var, obs_list, 
                         transform_sim=NULL, transform_var=NULL) {
 
   if (is.null(var)) var <- setdiff(unique(unlist(lapply(obs_list, names))),"Date")
   
-  # Compute parameter valyues in case there are some equality constraints defined in parma_values
+  # Compute parameter values in case there are some equality constraints defined in parma_values
   param_values <- CroptimizR:::compute_eq_const(param_values, NULL)
   
   if ( (("situation" %in% names(formals(model_wrapper))) & ("var" %in% names(formals(model_wrapper)))) ) {

@@ -265,7 +265,8 @@ if (is.null(res_it2)) {
   optim_options$out_dir <- file.path(out_dir,"Iteration2")
 
   # Run model wrapper using parameter values estimated in iteration 1 to weight the minimized criterion
-  sim_it1 <- run_wrapper(model_options=model_options,
+  sim_it1 <- run_wrapper(model_wrapper = model_wrapper,
+                         model_options=model_options,
                          param_values=c(res_it1$final_values, 
                                         res_it1$forced_param_values),
                          situation=sitNames_corresp, var=reqVar_Wrapper, 
@@ -334,11 +335,12 @@ if (is.null(res_it3)) {
   final_param_info$init_values <- res_it2$final_values
     
   # Run model wrapper using parameter values estimated in iteration 2 to weight the minimized criterion
-  sim_it2 <- run_wrapper(model_options=model_options,
-                           param_values=c(res_it2$final_values, res_it2$forced_param_values),
-                           situation=sitNames_corresp, var=reqVar_Wrapper, 
-                           obs_list=converted_obs_list,
-                           transform_sim=transform_sim, transform_var=transform_var)
+  sim_it2 <- run_wrapper(model_wrapper = model_wrapper,
+                         model_options=model_options,
+                         param_values=c(res_it2$final_values, res_it2$forced_param_values),
+                         situation=sitNames_corresp, var=reqVar_Wrapper, 
+                         obs_list=converted_obs_list,
+                         transform_sim=transform_sim, transform_var=transform_var)
 
   # Define the criterion to minimize
   crit_function <- function(sim_list, obs_list) {
@@ -363,7 +365,8 @@ if (is.null(res_it3)) {
                          transform_sim=transform_sim, var=reqVar_Wrapper)
   
   # run the model_wrapper after final optimization
-  sim_final <- run_wrapper(model_options=model_options,
+  sim_final <- run_wrapper(model_wrapper = model_wrapper,
+                           model_options=model_options,
                            param_values=c(res_it3$final_values, res_it3$forced_param_values),
                            situation=sitNames_corresp, var=reqVar_Wrapper, 
                            obs_list=converted_obs_list,

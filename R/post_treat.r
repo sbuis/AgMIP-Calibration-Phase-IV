@@ -121,10 +121,6 @@ generate_cal_results <- function(sim_final, obs_list, obsVar_units, obsVar_used,
   sim_final_converted$sim_list  <- lapply(sim_final_converted$sim_list ,drop_units)
   attr(sim_final_converted$sim_list, "class") <- "cropr_simulation"
   
-  # Plot the results
-  p <- plot(sim_final_converted$sim_list, obs=obs_list, type="scatter")
-  CroPlotR::save_plot_pdf(p, out_dir, file_name = "scatterPlots")
-  
   # Compute stats criteria
   stats <- summary(sim_final_converted$sim_list, obs=obs_list, stats=c("MSE", "Bias2","SDSD","LCS"))
   write.table(dplyr::select(stats,-group, -situation),

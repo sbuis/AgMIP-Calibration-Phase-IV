@@ -1,12 +1,12 @@
 # Generate synthetic observations using the model_wrapper
 
-generate_obs_synth <- function(true_param_values, model_options, sitNames_corresp, 
+generate_obs_synth <- function(true_param_values, model_wrapper, model_options, sitNames_corresp, 
                                reqVar_Wrapper, converted_obs_list, transform_sim,
                                simVar_units, varNames_corresp, obsVar_units,  
                                obs_list) {
   
   # run the model_wrapper from default parameter values
-  sim_true <- run_wrapper(model_options=model_options,
+  sim_true <- run_wrapper(model_wrapper=model_wrapper, model_options=model_options,
                              param_values=true_param_values,
                              situation=sitNames_corresp, var=reqVar_Wrapper, 
                              obs_list=converted_obs_list,
