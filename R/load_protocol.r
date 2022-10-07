@@ -39,6 +39,7 @@ load_protocol <- function(protocol_path, transform_outputs, use_obs_synth=FALSE)
   candidate_params_df <- read_excel(protocol_path, 
                                     sheet = grep(tolower("candidate parameters"),sheets))
   
+  true_param_values <- NA
   if (use_obs_synth) {
 
     # Building true_param_values 
