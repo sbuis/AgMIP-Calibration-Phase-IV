@@ -88,3 +88,12 @@ convert_and_rename <- function(sim, sitNames_corresp, simVar_units,
   return(sim)
 }
 
+
+convert_name <- function(names,corresp) {
+  res <- rep(NA,length(names))
+  res[names %in% names(corresp)] <- corresp[na.omit(match(names, names(corresp)))]
+  res[names %in% corresp] <- names(corresp[na.omit(match(names, corresp))])
+  return(res)  
+}
+
+
