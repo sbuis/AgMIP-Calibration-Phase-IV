@@ -1,11 +1,11 @@
-load_protocol <- function(protocol_path, transform_outputs, use_obs_synth=FALSE) {
+load_protocol <- function(protocol_path, transform_outputs, use_obs_synth=FALSE, beta) {
   # Load the protocol description as given in xls file `protocol_path`
   # Returns:
   #   - sitNames_corresp: correspondance between situation Numbers and Names
   #   - varNames_corresp: correspondance between simulated and observed variables names
   #   - simVar_units: units of simulated variables
   #   - param_info: bounds of parameters to estimate
-  #   - forced_param_values: default values of parameters to estimate and parameters to set to compute
+  #   - default_param_values: default values of parameters to estimate and parameters to set to compute
   #   - param_group: list of almost additive and candidate parameters to estimate
   
   check_protocol_structure(protocol_path)
@@ -38,7 +38,14 @@ load_protocol <- function(protocol_path, transform_outputs, use_obs_synth=FALSE)
                                    sheet = grep(tolower("almost additive parameters"),sheets))
   candidate_params_df <- read_excel(protocol_path, 
                                     sheet = grep(tolower("candidate parameters"),sheets))
+  if (any(grepl(tolower("parameters to set"),sheets))) {
+    constraints_df <- read_excel(protocol_path, 
+                                 sheet = grep(tolower("parameters to set"),sheets))
+  } else {
+    constraints_df <- NULL
+  }
   
+  # Generate new default values in case of synthetic experiments
   true_param_values <- NA
   if (use_obs_synth) {
 
@@ -49,35 +56,26 @@ load_protocol <- function(protocol_path, transform_outputs, use_obs_synth=FALSE)
       as.list(setNames(object = candidate_params_df$`default value`,
                        nm = candidate_params_df$`name of the parameter`))
     )
-    if (any(grepl(tolower("parameters to set"),sheets))) {
-      constraints_df <- read_excel(protocol_path, 
-                                   sheet = grep(tolower("parameters to set"),sheets))
-      true_param_values <- c(
-        true_param_values,
-        as.list(setNames(object = constraints_df$`value or formula`,
-                         nm = constraints_df$`name of the parameter`))
-      )
-    }
+    true_param_values <- c(
+      true_param_values,
+      as.list(setNames(object = constraints_df$`value or formula`,
+                       nm = constraints_df$`name of the parameter`))
+    )
+  
+    additive_params_df$`default value` <- perturb_param(additive_params_df, beta)
+      
+    candidate_params_df$`default value` <- perturb_param(candidate_params_df, beta)
     
-    # Perturb additive_param and candidate_param values (only the 1st candidate per group)
-    # (but constrain them to be in their given bounds)
-    additive_params_df$`default value` <- runif(length(additive_params_df$`default value`), 
-                                                min=0.7, max=1.3) * 
-      additive_params_df$`default value`
-    additive_params_df <- additive_params_df %>% 
-      mutate(`default value` = case_when(`default value` > `upper bound` ~ `upper bound`, 
-                                         `default value` < `lower bound` ~ `lower bound`, 
-                                         `default value` <= `upper bound` & `default value` >= `lower bound` ~ `default value`))
+    write.csv2(additive_params_df, 
+               file=file.path(out_dir,paste0("synth_almost_additive_parameters",
+                                             "_beta",beta,".csv")), 
+               row.names = FALSE)
     
-    rows_to_change <- match(unique(candidate_params_df$group),
-                            candidate_params_df$group)
-    candidate_params_df$`default value`[rows_to_change] <- 
-      candidate_params_df$`default value`[rows_to_change] * 
-      runif(rows_to_change, min=0.7, max=1.3)
-    candidate_params_df <- candidate_params_df %>% 
-      mutate(`default value` = case_when(`default value` > `upper bound` ~ `upper bound`, 
-                                         `default value` < `lower bound` ~ `lower bound`, 
-                                         `default value` <= `upper bound` & `default value` >= `lower bound` ~ `default value`))
+    write.csv2(candidate_params_df, 
+               file=file.path(out_dir,paste0("synth_candidate_parameters",
+                                            "_beta",beta,".csv")), 
+               row.names = FALSE)     
+    
   }
   
   
@@ -94,23 +92,19 @@ load_protocol <- function(protocol_path, transform_outputs, use_obs_synth=FALSE)
                                           nm = c(additive_params_df$`name of the parameter`,
                                                  candidate_params_df$`name of the parameter`)))
   
-  # Building forced_param_values 
-  forced_param_values <- c(
+  # Building default_param_values 
+  default_param_values <- c(
     as.list(setNames(object = additive_params_df$`default value`,
                      nm = additive_params_df$`name of the parameter`)),
     as.list(setNames(object = candidate_params_df$`default value`,
                                   nm = candidate_params_df$`name of the parameter`))
   )
-  if (any(grepl(tolower("parameters to set"),sheets))) {
-    constraints_df <- read_excel(protocol_path, 
-                                 sheet = grep(tolower("parameters to set"),sheets))
-    forced_param_values <- c(
-      forced_param_values,
-      as.list(setNames(object = constraints_df$`value or formula`,
-                       nm = constraints_df$`name of the parameter`))
-    )
-  }
-
+  default_param_values <- c(
+    default_param_values,
+    as.list(setNames(object = constraints_df$`value or formula`,
+                     nm = constraints_df$`name of the parameter`))
+  )
+  
   # Parameters per group of observed variables
   param_group <- lapply(unique(additive_params_df$group),function(x) {
     res <- list(obligatory=filter(additive_params_df, group==x)$`name of the parameter`,
@@ -129,7 +123,7 @@ load_protocol <- function(protocol_path, transform_outputs, use_obs_synth=FALSE)
               varNames_corresp=varNames_corresp, 
               simVar_units=simVar_units, 
               param_info=param_info, 
-              forced_param_values=forced_param_values, 
+              default_param_values=default_param_values, 
               param_group=param_group, obsVar_group=obsVar_group, 
               true_param_values=true_param_values))
 }
@@ -218,3 +212,33 @@ check_protocol_content <- function(protocol_path, variables_df, varNames_corresp
   
 }
 
+
+perturb_param <- function(params_df, beta) {
+# Generates new values for `default values` from perturbation of original values
+# using x <- x + alpha * beta * (distance between x and bound in direction alpha)
+# where alpha is randomly chosen in {-1, 1}
+# params_df is a df including columns `default value`, `lower bound` and `upper bound`
+# Return the vector of new generated values
+  
+  params_df <- 
+    params_df %>%
+    mutate(
+      `alpha` = case_when(
+        `default value` == `lower bound` ~ 1,
+        `default value` == `upper bound` ~ -1, 
+        `default value` > `lower bound` & `default value` < `upper bound` ~ 
+          sample(x=c(-1,1), size=1)
+      )
+    ) %>%
+    mutate(
+      `default value` = `default value` + `alpha` * beta * 
+        case_when(`alpha` == -1 ~ `default value` - `lower bound`, 
+                  `alpha` == 1 ~ `upper bound` - `default value`)
+    )
+  
+  # rows_to_change <- match(unique(candidate_params_df$group),
+  #                         candidate_params_df$group)
+
+  return(params_df$`default value`)
+  
+}
