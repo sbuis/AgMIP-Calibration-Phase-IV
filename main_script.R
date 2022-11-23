@@ -13,6 +13,17 @@ install_load()
 #                    FALSE otherwise)
 debug <- TRUE
 
+# Synthetic observation mode (set to TRUE to test the protocol using synthetic observations 
+#                                    FALSE otherwise)
+use_obs_synth <- TRUE
+beta <- 0.3 # level of perturbation of parameters values : 0.3 or 0.6
+noise_sd <- 0 # sd of gaussian noise added to synthetic observations (in percentage, set 0 or 0.1)
+seed <- 1234 # seed for random number generation. Set it to a constant value for an exact replicate of the experiment. Change its value to change random number generation and thus synthetic observations and default parameters values.
+
+# Set TRUE to remove Minnipa observations, FALSE otherwise
+data_without_Minnipa <- TRUE
+
+
 # Define the test case ("French" or "Australian") and variety (only used for French dataset)
 # test_case <- "French"
 # variety <- "Bermude"  # "Apache" or "Bermude"
@@ -80,23 +91,30 @@ if (test_case=="French") {
 ################################################################################
 
 
+set.seed(seed)
 
 # Load the protocol description file (xls file) 
-protocol_descr <- load_protocol(xls_path, transform_outputs)
+protocol_descr <- load_protocol(xls_path, transform_outputs, use_obs_synth, beta)
 sitNames_corresp <- protocol_descr$sitNames_corresp 
 varNames_corresp <- protocol_descr$varNames_corresp 
 simVar_units <- protocol_descr$simVar_units 
 param_info <- protocol_descr$param_info
-forced_param_values <- protocol_descr$forced_param_values 
+forced_param_values <- protocol_descr$default_param_values 
 param_group <- protocol_descr$param_group # list of params to estimate per group
 obsVar_group <- protocol_descr$obsVar_group # groups of observed variables used in the calibration
+true_param_values <- protocol_descr$true_param_values 		   
 
 # Load the observations
 suffix <- NULL
-if (test_case=="French") suffix <- paste0("_",variety) 
-obs_data_path <- file.path(here(),"data",paste0("cal_4_obs_",test_case,suffix,".txt"))
-obs_unit_path <- file.path(here(),"data",paste0("cal_4_obs_",test_case,"_units.csv"))
-obs <- load_obs(obs_data_path, obs_unit_path, varNames_corresp, 
+if (test_case=="French") suffix <- paste0("_",variety)
+if (data_without_Minnipa) {
+  obs_data_folder <- "data_without_Minnipa"
+} else {
+  obs_data_folder <- "data"
+}
+obs_data_path <- file.path(here(),obs_data_folder,paste0("cal_4_obs_",test_case,suffix,".txt"))
+obs_unit_path <- file.path(here(),obs_data_folder,paste0("cal_4_obs_",test_case,"_units.csv"))
+obs <- load_obs(obs_data_path, obs_unit_path, varNames_corresp,
                 sitNames_corresp, simVar_units, obsVar_group)
 
 obs_list <- obs$obs_list  # list of observation as defined in the observation file
@@ -111,7 +129,7 @@ template_path <- file.path(here(),"data",paste0("cal_4_results_",test_case,suffi
 template_df <- read.table(template_path,
                           header = TRUE, stringsAsFactors = FALSE)
 resVar_names <- setdiff(names(template_df),c("Number","Site","HarvestYear",
-                                             "Date_sowing", "SowingDate", 
+                                             "Date_sowing", "SowingDate",
                                              "Variety","Date"))
 
 ## Check that the list of "observed and required variables" as defined in the protocol 
@@ -121,7 +139,7 @@ if (!all(names(varNames_corresp) %in% unique(c(obsVar_names, resVar_names))))
   stop(paste0("Unknown variable(s) ",
               paste(setdiff(names(varNames_corresp), unique(c(obsVar_names, resVar_names))), collapse = ","), 
               "\nPlease modify sheet \"variables\", column \"Name of the observed or required variable\" of the file:\n",
-              xls_path,
+              protocol_path,
               "\nThe variables included in this column must be included in the list of variables defined in files:\n",
               template_path, "\nand\n",obs_data_path))
 
@@ -130,9 +148,21 @@ if (!all(names(varNames_corresp) %in% unique(c(obsVar_names, resVar_names))))
 #  transform_inputs - transform_outputs)
 reqVar_Wrapper <- setdiff(c(varNames_corresp,transform_inputs),transform_outputs)
 
+if (use_obs_synth) {
+  
+  obs_synth <- generate_obs_synth(true_param_values=c(true_param_values), 
+                                  model_wrapper, 
+                                  model_options, sitNames_corresp, 
+                                  reqVar_Wrapper, converted_obs_list, transform_sim,
+                                  simVar_units, varNames_corresp, obsVar_units,  
+                                  obs_list, obsVar_used, noise_sd)									
+  obs_list <- obs_synth$obs_list
+  converted_obs_list <- obs_synth$converted_obs_list
+  
+} 
 
 # Define number of repetitions and evaluations
-nb_rep_it1 <- c(20,5)
+nb_rep_it1 <- c(20, 5)
 nb_rep_it2 <- 20
 nb_rep_it3 <- 20
 maxeval <- 5000
@@ -144,11 +174,14 @@ if (debug) {
   converted_obs_list <- filter_obs(converted_obs_list,
                                        situation = sit_list,
                                        include=TRUE)
+  obs_list <- filter_obs(obs_list,
+                         situation = names(obs_list)[1:6],
+                         include=TRUE)  
   for (gr in names(param_group)) { # only keep the 1st candidate
     if (!is.null(param_group[[gr]]$candidates)) 
       param_group[[gr]]$candidates <- param_group[[gr]]$candidates[1]
   }
-  nb_rep_it1 <- c(2,2)
+  nb_rep_it1 <- c(2, 2)
   nb_rep_it2 <- 2
   nb_rep_it3 <- 2
   maxeval=3
@@ -168,12 +201,24 @@ complem_info <- list(it1=list(), it2=list(), it3=list())
 if (file.exists(file.path(out_dir,"checkpoint.Rdata"))) load(file.path(out_dir,"checkpoint.Rdata"))
 
 
+# Evaluate performances using default values of the parameters
+
+sim_default <- run_wrapper(model_wrapper=model_wrapper,
+                           model_options=model_options,
+                           param_values=c(forced_param_values),
+                           situation=sitNames_corresp, var=reqVar_Wrapper, 
+                           obs_list=converted_obs_list,
+                           transform_sim=transform_sim, transform_var=NULL)
+sim_list_default_converted <- convert_and_rename(sim_default$sim_list, sitNames_corresp, simVar_units, 
+                                           varNames_corresp, obsVar_units)
+p <- plot(sim_list_default_converted, obs=obs_list, type="scatter")
+CroPlotR::save_plot_pdf(p, out_dir, file_name = "scatterPlots_default")
 # Parameter Estimation, first iteration
 
 cat("\n----- Parameter estimation Iteration 1\n")
 cat("--------------------------------------\n")
 
-optim_options=list(nb_rep=nb_rep_it1, maxeval=maxeval, ranseed=1234, xtol_rel=1e-2, ftol_rel=1e-4)
+optim_options=list(nb_rep=nb_rep_it1, maxeval=maxeval, ranseed=seed, xtol_rel=1e-4, ftol_rel=1e-4)
 
 transform_var <- eval(parse(text=paste0("c(",varNames_corresp[["Biomass"]],
                                         "=function(x) log(x+.Machine$double.xmin))")))
@@ -206,8 +251,19 @@ while (igr < length(param_group)) {
   }
   crt_forced_param_values[param_group[[gr]]$obligatory] <- NULL
   
+  crit_function <- function(sim_list, obs_list) {
+    crit <- crit_ols(sim_list, obs_list)
+    if ( !(crt_var_list[1] %in% names(transform_var)) ) {
+      units(crit) <- paste(simVar_units[[crt_var_list[1]]],
+                           simVar_units[[crt_var_list[1]]])
+      units(crit) <- paste(obsVar_units[[convert_name(crt_var_list[1],varNames_corresp)]],
+                           obsVar_units[[convert_name(crt_var_list[1],varNames_corresp)]])
+      crit <- drop_units(crit)
+    }
+    return(crit)
+  }
   res_it1_tmp <- estim_param(obs_list=crt_obs_list, 
-                     crit_function = crit_ols,
+                     crit_function = crit_function,
                      model_function=model_wrapper,
                      model_options=model_options,
                      optim_options=optim_options,
@@ -216,9 +272,24 @@ while (igr < length(param_group)) {
                      transform_var=transform_var,
                      transform_sim=transform_sim, var=reqVar_Wrapper)
   
+  # Run model wrapper using parameter values estimated at this step
+  sim_it1_tmp <- run_wrapper(model_wrapper = model_wrapper,
+                             model_options=model_options,
+                             param_values=c(res_it1_tmp$final_values, 
+                                            res_it1_tmp$forced_param_values),
+                             situation=sitNames_corresp, var=reqVar_Wrapper, 
+                             obs_list=crt_obs_list,
+                             transform_sim=transform_sim, transform_var=NULL)
+  
+  # ScatterPlots simulations VS obs at this step
+  sim_list_it1_tmp_converted <- convert_and_rename(sim_it1_tmp$sim_list, sitNames_corresp, simVar_units, 
+                                                   varNames_corresp, obsVar_units)
+  p <- plot(sim_list_it1_tmp_converted, obs=obs_list, type="scatter")
+  CroPlotR::save_plot_pdf(p, optim_options$out_dir, 
+                          file_name = paste0("scatterPlots_it1_",gr))
   res_it1[[gr]] <- res_it1_tmp
   
-  save(res_it1_tmp, res_it1, igr, crt_forced_param_values, 
+  save(sim_default, res_it1_tmp, res_it1, igr, crt_forced_param_values, 
        file = file.path(out_dir,paste0("checkpoint_it1_gr",igr,".Rdata")))
   
   complem_info$it1[[gr]] <- list(forced_param_values=unlist(crt_forced_param_values),
@@ -237,7 +308,22 @@ res_it1$final_values <- setNames(object=unlist(lapply(names(param_group),
 last_forced_param_values <- res_it1[[names(param_group)[length(param_group)]]]$forced_param_values
 res_it1$forced_param_values <- last_forced_param_values[setdiff(names(last_forced_param_values),
                                                                 final_params)]
-save(res_it1, igr, crt_forced_param_values, 
+# Run model wrapper using parameter values estimated in iteration 1
+sim_it1 <- run_wrapper(model_wrapper = model_wrapper,
+                       model_options=model_options,
+                       param_values=c(res_it1$final_values, 
+                                      res_it1$forced_param_values),
+                       situation=sitNames_corresp, var=reqVar_Wrapper, 
+                       obs_list=converted_obs_list,
+                       transform_sim=transform_sim, transform_var=NULL)
+
+# ScatterPlots simulations VS obs after it1
+sim_list_it1_converted <- convert_and_rename(sim_it1$sim_list, sitNames_corresp, simVar_units, 
+                                             varNames_corresp, obsVar_units)
+p <- plot(sim_list_it1_converted, obs=obs_list, type="scatter")
+CroPlotR::save_plot_pdf(p, out_dir, file_name = "scatterPlots_it1")
+
+save(sim_default, res_it1, sim_it1, igr, crt_forced_param_values, 
      file = file.path(out_dir,paste0("checkpoint_it1_final.Rdata")))
 
 
@@ -247,7 +333,7 @@ save(res_it1, igr, crt_forced_param_values,
 cat("\n----- Parameter estimation Iteration 2\n")
 cat("--------------------------------------\n")
 
-optim_options=list(nb_rep=nb_rep_it2, maxeval=maxeval, ranseed=1234, xtol_rel=1e-2, ftol_rel=1e-4)
+optim_options=list(nb_rep=nb_rep_it2, maxeval=maxeval, ranseed=seed, xtol_rel=1e-4, ftol_rel=1e-4)
 
 # List of parameters to estimate as selected in iteration 1
 final_params <- names(res_it1$final_values)
@@ -264,31 +350,13 @@ if (is.null(res_it2)) {
  
   optim_options$out_dir <- file.path(out_dir,"Iteration2")
 
-  # Run model wrapper using parameter values estimated in iteration 1 to weight the minimized criterion
-  sim_it1 <- run_wrapper(model_wrapper = model_wrapper,
-                         model_options=model_options,
-                         param_values=c(res_it1$final_values, 
-                                        res_it1$forced_param_values),
-                         situation=sitNames_corresp, var=reqVar_Wrapper, 
-                         obs_list=converted_obs_list,
-                         transform_sim=transform_sim, transform_var=transform_var)
-
-  #########################
-  # EN COURS, à finir en fonction de la réponse de Daniel au mail envoyé le 14/06
-  #########################
-  
-  # Corriger weight pour phenology: prendre sqrt(moyenne des MSE sur toutes les variables)
-  # Demander aussi les SSE
-  # Les moyenner sur toutes les variables
-  # Prendre la racine
-
-  # filtrer sur les variables phenos pour faire la somme des SSE
-
   # Define the criterion to minimize
+  ## apply transformation to sim_it1 first
+  sim_it1_transformed <- apply_transform_var(sim_it1$sim_list, transform_var)				
   crit_function <- function(sim_list, obs_list) {
     weight <- setNames(
-      summary(sim_it1$sim_list, obs=obs_list, stats = c("RMSE"))$RMSE,
-      nm=summary(sim_it1$sim_list, obs=obs_list, stats = c("RMSE"))$variable)
+      summary(sim_it1_transformed, obs=obs_list, stats = c("RMSE"))$RMSE,
+      nm=summary(sim_it1_transformed, obs=obs_list, stats = c("RMSE"))$variable)
     alpha <- 1
     weight_it2 <<- unique(bind_rows(weight_it2,alpha*weight[names(weight)!="Date"]))
     crit_wls(sim_list, obs_list, 
@@ -306,13 +374,28 @@ if (is.null(res_it2)) {
                          transform_var=transform_var,
                          transform_sim=transform_sim, var=reqVar_Wrapper)
 
-  save(res_it1, igr, res_it2, 
+  # Run model wrapper using parameter values estimated in iteration 2
+  sim_it2 <- run_wrapper(model_wrapper = model_wrapper,
+                         model_options=model_options,
+                         param_values=c(res_it2$final_values, res_it2$forced_param_values),
+                         situation=sitNames_corresp, var=reqVar_Wrapper, 
+                         obs_list=converted_obs_list,
+                         transform_sim=transform_sim, transform_var=NULL)
+  
+  # ScatterPlots simulations VS obs after it2
+  sim_list_it2_converted <- convert_and_rename(sim_it2$sim_list, sitNames_corresp, simVar_units, 
+                                               varNames_corresp, obsVar_units)
+  p <- plot(sim_list_it2_converted, obs=obs_list, type="scatter")
+  CroPlotR::save_plot_pdf(p, out_dir, file_name = "scatterPlots_it2")
+  
+  
+  save(sim_default, res_it1, sim_it1, igr, res_it2, sim_it2, 
        file = file.path(out_dir,paste0("checkpoint_it2.Rdata")))
   
   complem_info$it2 <- list(forced_param_values=unlist(final_forced_param_values),
                            obsVar_used=varNames_corresp[varNames_corresp %in% unlist(lapply(converted_obs_list,names))],
                            converted_obs_list=converted_obs_list,
-                           weight=weight_it2)
+                           weight=weight_it2, sim_it1=sim_it1)
   save(complem_info, 
        file = file.path(out_dir,paste0("complementary_info.Rdata")))
   
@@ -327,26 +410,20 @@ cat("--------------------------------------\n")
 
 if (is.null(res_it3)) {
   
-  optim_options=list(nb_rep=nb_rep_it3, maxeval=maxeval, ranseed=1234, xtol_rel=1e-2, ftol_rel=1e-4)
+  optim_options=list(nb_rep=nb_rep_it3, maxeval=maxeval, ranseed=seed, xtol_rel=1e-4, ftol_rel=1e-4)
 
   optim_options$out_dir <- file.path(out_dir,"Iteration3")
 
   # Use estimated values of iteration 2 as initial values for 1st repetition
   final_param_info$init_values <- res_it2$final_values
     
-  # Run model wrapper using parameter values estimated in iteration 2 to weight the minimized criterion
-  sim_it2 <- run_wrapper(model_wrapper = model_wrapper,
-                         model_options=model_options,
-                         param_values=c(res_it2$final_values, res_it2$forced_param_values),
-                         situation=sitNames_corresp, var=reqVar_Wrapper, 
-                         obs_list=converted_obs_list,
-                         transform_sim=transform_sim, transform_var=transform_var)
-
   # Define the criterion to minimize
+  ## apply transformation to sim_it2 first
+  sim_it2_transformed <- apply_transform_var(sim_it2$sim_list, transform_var)
   crit_function <- function(sim_list, obs_list) {
     weight <- setNames(
-      summary(sim_it2$sim_list, obs=obs_list, stats = c("RMSE"))$RMSE,
-      nm=summary(sim_it2$sim_list, obs=obs_list, stats = c("RMSE"))$variable)
+      summary(sim_it2_transformed, obs=obs_list, stats = c("RMSE"))$RMSE,
+      nm=summary(sim_it2_transformed, obs=obs_list, stats = c("RMSE"))$variable)
     alpha <- 1
     weight_it3 <<- unique(bind_rows(weight_it3,alpha*weight[names(weight)!="Date"]))
     crit_wls(sim_list, obs_list, 
@@ -370,16 +447,21 @@ if (is.null(res_it3)) {
                            param_values=c(res_it3$final_values, res_it3$forced_param_values),
                            situation=sitNames_corresp, var=reqVar_Wrapper, 
                            obs_list=converted_obs_list,
-                           transform_sim=transform_sim)
+                           transform_sim=transform_sim, transform_var=NULL)
   
+  # ScatterPlots simulations VS obs after it3
+  sim_list_it3_converted <- convert_and_rename(sim_final$sim_list, sitNames_corresp, simVar_units, 
+                                               varNames_corresp, obsVar_units)
+  p <- plot(sim_list_it3_converted, obs=obs_list, type="scatter")
+  CroPlotR::save_plot_pdf(p, out_dir, file_name = "scatterPlots_it3")
   
-  save(res_it1, igr, res_it2, res_it3, sim_final,
-       file = file.path(out_dir,paste0("checkpoint_it3.Rdata")))
+  save(sim_default, res_it1, sim_it1, igr, res_it2, sim_it2, res_it3, sim_final,
+  file = file.path(out_dir,paste0("checkpoint_it3.Rdata")))
   
   complem_info$it3 <- list(forced_param_values=unlist(final_forced_param_values),
                            obsVar_used=varNames_corresp[varNames_corresp %in% unlist(lapply(converted_obs_list,names))],
                            converted_obs_list=converted_obs_list,
-                           weight=weight_it3)
+                           weight=weight_it3, sim_it2=sim_it2)
   save(complem_info, 
        file = file.path(out_dir,paste0("complementary_info.Rdata")))
   
@@ -392,14 +474,16 @@ suffix <- NULL
 if (test_case=="French") suffix <- paste0("_",variety) 
 generate_results_files(param_group, model_options,  
                        complem_info, res_it2, res_it3,
-                       sitNames_corresp, sim_final, obs_list, converted_obs_list,
+                       sitNames_corresp, 
+                       sim_default, sim_it1, sim_it2, sim_final, 
+                       obs_list, converted_obs_list,
                        obsVar_units, obsVar_used, 
-                       template_path, out_dir, test_case, variety, varNames_corresp,
-                       resVar_names)
-
+                       template_path, out_dir, test_case, variety,
+                       varNames_corresp, resVar_names, 
+                       forced_param_values)
 # Copying script and protocol files in result folder
 file.copy(from=xls_path, to=out_dir, overwrite = TRUE)
-file.copy(from=getSourceEditorContext()$path, to=out_dir, overwrite = TRUE)
+file.copy(from=rstudioapi::getSourceEditorContext()$path, to=out_dir, overwrite = TRUE)
 
 # Displaying Results
 cat("\n----------------------\n")
