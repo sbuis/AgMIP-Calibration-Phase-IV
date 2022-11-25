@@ -139,7 +139,7 @@ if (!all(names(varNames_corresp) %in% unique(c(obsVar_names, resVar_names))))
   stop(paste0("Unknown variable(s) ",
               paste(setdiff(names(varNames_corresp), unique(c(obsVar_names, resVar_names))), collapse = ","), 
               "\nPlease modify sheet \"variables\", column \"Name of the observed or required variable\" of the file:\n",
-              protocol_path,
+              xls_path,
               "\nThe variables included in this column must be included in the list of variables defined in files:\n",
               template_path, "\nand\n",obs_data_path))
 
