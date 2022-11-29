@@ -20,7 +20,12 @@ generate_obs_synth <- function(true_param_values, model_wrapper, model_options, 
                                                       obs_list)
   res <- CroptimizR:::intersect_sim_obs(sim_list = obs_sim_list$sim_list,
                                         obs_list = obs_sim_list$obs_list)
-  obs_list_synth_true <- res$sim_list
+  obs_list_synth_true <- lapply(names(res$sim_list), function(sit) {
+    res$sim_list[[sit]] <- res$sim_list[[sit]][,names(res$obs_list[[sit]])]
+    res$sim_list[[sit]][is.na(res$obs_list[[sit]])] <- NA
+    res$sim_list[[sit]]
+  })
+  names(obs_list_synth_true) <- names(res$sim_list)
   obs_list_synth_true <- set_units(obs_list_synth_true, obsVar_units)
   # Remove cropr attribute ?
   
