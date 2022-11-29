@@ -227,7 +227,7 @@ perturb_param <- function(params_df, beta) {
         `default value` == `lower bound` ~ 1,
         `default value` == `upper bound` ~ -1, 
         `default value` > `lower bound` & `default value` < `upper bound` ~ 
-          sample(x=c(-1,1), size=1)
+          sample(x=c(-1,1), size=nrow(params_df), replace=TRUE)
       )
     ) %>%
     mutate(
