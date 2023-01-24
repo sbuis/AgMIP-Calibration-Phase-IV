@@ -3,7 +3,7 @@
 generate_obs_synth <- function(true_param_values, model_wrapper, model_options, sitNames_corresp, 
                                reqVar_Wrapper, converted_obs_list, transform_sim,
                                simVar_units, varNames_corresp, obsVar_units,  
-                               obs_list, obsVar_used, noise_sd=0) {
+                               obs_list, obsVar_used, noise_sd=0, sowing_jul_obs) {
   
   # run the model_wrapper from default parameter values
   sim_true <- run_wrapper(model_wrapper=model_wrapper, model_options=model_options,
@@ -42,14 +42,37 @@ generate_obs_synth <- function(true_param_values, model_wrapper, model_options, 
   }
             
   # Add gaussian noise
-  obs_list_synth <- lapply(obs_list_synth_true, function(x) {
+  ## for the dates, gaussian noise is computed for julian days from sowing ...
+  ### so first transform to julian days from sowing ...
+  var_dates <- obsVar_used[grepl("Date",obsVar_used)]
+  units(sowing_jul_obs) <- "d"
+  obs_list_synth_from_sowing <- lapply(names(obs_list_synth_true), function(sit) {
+    obs_list_synth_true[[sit]] %>% 
+      mutate(sowing_jul_obs = sowing_jul_obs[sit]) %>%
+      mutate(across(all_of(var_dates), 
+                    ~ .x - .data$sowing_jul_obs[sit]))
+  }
+  )
+  names(obs_list_synth_from_sowing) <- names(obs_list_synth_true)
+  ### then compute and add the noise  ...
+  obs_list_synth_from_sowing <- lapply(obs_list_synth_from_sowing, function(x) {
     x %>% mutate(across(
       intersect(names(x),obsVar_used), 
       ~ .x + .x * rnorm(length(.x), sd = noise_sd)
     ))
   }
   )
-
+  ### then transform to jul days from the given origin  ...
+  obs_list_synth <- lapply(names(obs_list_synth_from_sowing), function(sit) {
+    obs_list_synth_from_sowing[[sit]] %>% 
+      mutate(across(all_of(var_dates), 
+                    ~ .x + .data$sowing_jul_obs[sit]))
+  }
+  )
+  names(obs_list_synth) <- names(obs_list_synth_from_sowing)
+  
+  
+  
   # sim_synth <- sim_true
   # tmp <- lapply(names(sim_synth$sim_list_converted), function(x) {
   #   common_var <- intersect(names(sim_synth$sim_list_converted[[x]]), 

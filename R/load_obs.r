@@ -31,22 +31,19 @@ load_obs <- function(obs_data_path, obs_unit_path, varNames_corresp,
   ###################################################################################
   var_date <- obsVar_used[grepl("Date",obsVar_used)]
   if ("Date_sowing" %in% names(obs_df)) {
-    obs_df <- obs_df %>% 
-      mutate(year_sowing=year(as.Date(Date_sowing, format = "%d/%m/%Y")),
-             Origin=as.Date(paste0(year_sowing-1,"-12-31"))) %>% 
-      rowwise() %>% mutate(across(all_of(var_date), 
-                                  ~ julian(as.Date(.x, 
-                                                   format = "%d/%m/%Y"),
-                                           origin=Origin)))
-  } else {
-    obs_df <- obs_df %>% 
-      mutate(year_sowing=year(as.Date(SowingDate, format = "%d/%m/%Y")),
-             Origin=as.Date(paste0(year_sowing-1,"-12-31"))) %>% 
-      rowwise() %>% mutate(across(all_of(var_date), 
-                                  ~ julian(as.Date(.x, 
-                                                   format = "%d/%m/%Y"),
-                                           origin=Origin)))
+    obs_df <- rename(obs_df, Date_sowing="SowingDate")
   }
+  
+  obs_df <- obs_df %>% 
+    mutate(year_sowing=year(as.Date(SowingDate, format = "%d/%m/%Y")),
+           Origin=as.Date(paste0(year_sowing-1,"-12-31"))) %>% 
+    rowwise() %>% mutate(across(all_of(c("SowingDate",var_date)), 
+                                ~ julian(as.Date(.x, 
+                                                 format = "%d/%m/%Y"),
+                                         origin=Origin)))
+  
+  sowing_jul_obs <- setNames(obs_df$SowingDate[!duplicated(obs_df$Number)], 
+                             obs_df$Number[!duplicated(obs_df$Number)])
   
   # Add units
   for (var in obsVar_used) {
@@ -81,6 +78,6 @@ load_obs <- function(obs_data_path, obs_unit_path, varNames_corresp,
   
   return(list(obs_list=obs_list, converted_obs_list=converted_obs_list, 
               obsVar_names=obsVar_names, obsVar_units=obsVar_units, 
-              obsVar_used=obsVar_used))
+              obsVar_used=obsVar_used, sowing_jul_obs=sowing_jul_obs))
 
 }

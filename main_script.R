@@ -122,6 +122,7 @@ obsVar_names <- obs$obsVar_names # Names of the observed variables as defined in
 obsVar_units <- obs$obsVar_units # Units of the observed variables as defined in the observation file
 obsVar_used <- obs$obsVar_used # NAmes of the observed variables used in the current protocol application
 converted_obs_list <- obs$converted_obs_list # list of observation in th emodel space (i.e. with name of situation and variables as in the model_wrapper, and units as defined in model outputs)
+sowing_jul_obs <- obs$sowing_jul_obs
 
 # Get the list of variables for which the user must provide 
 # results in the cal_4_results_***.txt file)
@@ -155,7 +156,7 @@ if (use_obs_synth) {
                                   model_options, sitNames_corresp, 
                                   reqVar_Wrapper, converted_obs_list, transform_sim,
                                   simVar_units, varNames_corresp, obsVar_units,  
-                                  obs_list, obsVar_used, noise_sd)									
+                                  obs_list, obsVar_used, noise_sd, sowing_jul_obs)									
   obs_list <- obs_synth$obs_list
   converted_obs_list <- obs_synth$converted_obs_list
   
