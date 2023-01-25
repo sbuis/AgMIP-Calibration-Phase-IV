@@ -363,38 +363,34 @@ generate_obs_file <- function(obs_list, obsVar_units, obsVar_used,
       mutate(Date=as.Date(Date, format = "%d/%m/%Y")) 
   } 
   
+  ## Retrieve information from obs_list
   res_df <- CroPlotR::bind_rows(obs_list, .id="situation")
   res_df <- mutate(res_df, Number=as.integer(situation)) %>% select(-situation)
-  
+
   ## Add information from the template file
   template_df_ext <- slice(template_df_ext, which(!duplicated(template_df_ext$Number)))
-  res_df <- left_join(res_df, select(template_df_ext, Number,
-                                     setdiff(names(template_df_ext), names(res_df))), 
-                      by="Number") 
-  
+  res_df_full <- left_join(res_df, select(template_df_ext, Number,
+                                          setdiff(names(template_df_ext), names(res_df))), 
+                           by="Number") 
+    
   ## Convert julian days in Dates
   var_date <- names(res_df)[grepl("Date_",names(res_df))]   # TODO : change if HarvestDate is required ...
-  if ("Date_sowing" %in% names(res_df)) {
-    res_df <- res_df %>% 
-      mutate(year_sowing=year(as.Date(Date_sowing, format = "%d/%m/%Y")),
-             Origin=as.Date(paste0(year_sowing-1,"-12-31"))) %>% 
-      rowwise() %>% mutate(across(all_of(var_date), ~ case_when(.==0 ~ as.character(NA), 
-                                                                .!=0 ~ format(as.Date(.x, 
-                                                                                      origin=Origin),"%d/%m/%Y")))) %>%
-      select(-Origin, -year_sowing) %>% relocate(names(template_df))
-  } else {
-    res_df <- res_df %>% 
-      mutate(year_sowing=year(as.Date(SowingDate, format = "%d/%m/%Y")),
-             Origin=as.Date(paste0(year_sowing-1,"-12-31"))) %>% 
-      rowwise() %>% mutate(across(all_of(var_date), ~ case_when(.==0 ~ as.character(NA), 
-                                                                .!=0 ~ format(as.Date(.x, 
-                                                                                      origin=Origin),"%d/%m/%Y")))) %>%
-      select(-Origin, -year_sowing) %>% relocate(names(template_df))
+                                                            # only the obs date variables are selected here for julian days transformation
+                                                            # i.e. not the one added from template_df ...
+  if ("Date_sowing" %in% names(res_df_full)) {
+    res_df_full <- rename(res_df_full, Date_sowing="SowingDate")
   }
+  res_df_full <- res_df_full %>% 
+    mutate(year_sowing=year(as.Date(SowingDate, format = "%d/%m/%Y")),
+           Origin=as.Date(paste0(year_sowing-1,"-12-31"))) %>% 
+    rowwise() %>% mutate(across(all_of(var_date), ~ case_when(.==0 ~ as.character(NA), 
+                                                              .!=0 ~ format(as.Date(.x, 
+                                                                                    origin=Origin),"%d/%m/%Y")))) %>%
+    select(-Origin, -year_sowing) %>% relocate(names(template_df))
   
   suffix <- NULL
   if (test_case=="French") suffix <- paste0("_",variety) 
-  write.table(res_df,file = file.path(out_dir,paste0("cal_4_obs_", test_case, 
+  write.table(res_df_full,file = file.path(out_dir,paste0("cal_4_obs_", test_case, 
                                                      suffix, "_", file_type, "_", 
                                                      model_name, ".txt")),
               row.names = FALSE, quote=FALSE)
