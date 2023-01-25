@@ -66,7 +66,8 @@ generate_obs_synth <- function(true_param_values, model_wrapper, model_options, 
   obs_list_synth <- lapply(names(obs_list_synth_from_sowing), function(sit) {
     obs_list_synth_from_sowing[[sit]] %>% 
       mutate(across(intersect(names(.),var_dates), 
-                    ~ .x + .data$sowing_jul_obs[sit]))
+                    ~ .x + .data$sowing_jul_obs[sit])) %>%
+      select(-sowing_jul_obs)
   }
   )
   names(obs_list_synth) <- names(obs_list_synth_from_sowing)
