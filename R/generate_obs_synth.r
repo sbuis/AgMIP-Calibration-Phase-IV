@@ -49,7 +49,7 @@ generate_obs_synth <- function(true_param_values, model_wrapper, model_options, 
   obs_list_synth_from_sowing <- lapply(names(obs_list_synth_true), function(sit) {
     obs_list_synth_true[[sit]] %>% 
       mutate(sowing_jul_obs = sowing_jul_obs[sit]) %>%
-      mutate(across(all_of(var_dates), 
+      mutate(across(intersect(names(.),var_dates), 
                     ~ .x - .data$sowing_jul_obs[sit]))
   }
   )
@@ -65,7 +65,7 @@ generate_obs_synth <- function(true_param_values, model_wrapper, model_options, 
   ### then transform to jul days from the given origin  ...
   obs_list_synth <- lapply(names(obs_list_synth_from_sowing), function(sit) {
     obs_list_synth_from_sowing[[sit]] %>% 
-      mutate(across(all_of(var_dates), 
+      mutate(across(intersect(names(.),var_dates), 
                     ~ .x + .data$sowing_jul_obs[sit]))
   }
   )
