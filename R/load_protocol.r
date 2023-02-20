@@ -45,6 +45,35 @@ load_protocol <- function(protocol_path, transform_outputs, use_obs_synth=FALSE,
     constraints_df <- NULL
   }
   
+  # Check default values and bounds
+  if (any(additive_params_df$`default value` < additive_params_df$`lower bound` | 
+          additive_params_df$`default value` > additive_params_df$`upper bound`)) { 
+    stop(paste("Default value of parameter(s))",
+               paste(additive_params_df$`name of the parameter`[additive_params_df$`default value` < additive_params_df$`lower bound` | additive_params_df$`default value` > additive_params_df$`upper bound`], 
+                     collapse = ","),
+               "out of bounds. Please check default values and bounds of additive parameters in file",protocol_path))
+  }
+  if (any(candidate_params_df$`default value` < candidate_params_df$`lower bound` | 
+          candidate_params_df$`default value` > candidate_params_df$`upper bound`)) { 
+    stop(paste("Default value of parameter(s))",
+               paste(candidate_params_df$`name of the parameter`[candidate_params_df$`default value` < candidate_params_df$`lower bound` | candidate_params_df$`default value` > candidate_params_df$`upper bound`], 
+                     collapse = ","),
+               "out of bounds. Please check default values and bounds of candidate parameters in file",protocol_path))
+  }
+  if (any(additive_params_df$`lower bound` >= additive_params_df$`upper bound`)) { 
+    stop(paste("Bounds of parameter(s))",
+               paste(additive_params_df$`name of the parameter`[additive_params_df$`lower bound` >= additive_params_df$`upper bound`], 
+                     collapse = ","),
+               "are not well defined (lower bound >= upper bound. Please check bounds of additive parameters in file",protocol_path))
+  }
+  if (any(candidate_params_df$`lower bound` >= candidate_params_df$`upper bound`)) { 
+    stop(paste("Bounds of parameter(s))",
+               paste(candidate_params_df$`name of the parameter`[candidate_params_df$`lower bound` >= candidate_params_df$`upper bound`], 
+                     collapse = ","),
+               "are not well defined (lower bound >= upper bound. Please check bounds of candidate parameters in file",protocol_path))
+  }
+  
+
   # Generate new default values in case of synthetic experiments
   true_param_values <- NA
   if (use_obs_synth) {
