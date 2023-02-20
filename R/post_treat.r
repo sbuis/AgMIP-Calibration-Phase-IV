@@ -6,7 +6,9 @@ generate_results_files <- function(param_group, model_options,
                                    obsVar_units, obsVar_used, 
                                    template_path, out_dir, test_case, variety,
                                    varNames_corresp, resVar_names, 
-                                   forced_param_values, file_type="numerical") {
+                                   forced_param_values, file_type="numerical",
+                                   use_obs_synth=FALSE, sim_true=NULL, 
+                                   descr_ref_date=NULL) {
 
   # Tables of parameters for each iteration
   # ---------------------------------------
@@ -227,17 +229,30 @@ generate_results_files <- function(param_group, model_options,
     
   }
   
-  # Generate cal_4_results_* files
+  # Generate cal_4_results_* files for each iteration
+  generate_cal_results(sim_it1, obs_list, obsVar_units, obsVar_used, 
+                       sitNames_corresp, template_path, out_dir, test_case, 
+                       variety, varNames_corresp, resVar_names, paste0(file_type,"_it1"),
+                       use_obs_synth=use_obs_synth, sim_true=sim_true, 
+                       descr_ref_date=descr_ref_date)
+  generate_cal_results(sim_it2, obs_list, obsVar_units, obsVar_used, 
+                       sitNames_corresp, template_path, out_dir, test_case, 
+                       variety, varNames_corresp, resVar_names,  paste0(file_type,"_it2"),
+                       use_obs_synth=use_obs_synth, sim_true=sim_true, 
+                       descr_ref_date=descr_ref_date)
   generate_cal_results(sim_final, obs_list, obsVar_units, obsVar_used, 
                        sitNames_corresp, template_path, out_dir, test_case, 
-                       variety, varNames_corresp, resVar_names, file_type)
+                       variety, varNames_corresp, resVar_names, paste0(file_type,"_final"),
+                       use_obs_synth=use_obs_synth, sim_true=sim_true, 
+                       descr_ref_date=descr_ref_date)
   
 }
 
 
 generate_cal_results <- function(sim_final, obs_list, obsVar_units, obsVar_used, 
                                  sitNames_corresp, template_path, out_dir, test_case, 
-                                 variety,varNames_corresp, resVar_names, file_type) {
+                                 variety,varNames_corresp, resVar_names, file_type,
+                                 use_obs_synth=FALSE, sim_true=NULL, descr_ref_date=NULL) {
   
   # Convert simulations to observation space (names of situations and variables, units) if necessary
   if (is.null(sim_final$sim_list_converted)) {
@@ -281,22 +296,36 @@ generate_cal_results <- function(sim_final, obs_list, obsVar_units, obsVar_used,
   
   ## Create a mask for extracting required values from simulations
   ## The mask is equal to observed list for the situations of the calibration dataset 
-  ## + required variables at maturity for the 
-  ## situations of the evaluation dataset
+  ## + required variables at HARVEST for the situations of the evaluation dataset
   mask <- obs_list
   mask <- lapply(mask, function(x) {x[,resVar_names] <- 0; return(x)}) # add required variables if necessary
   mask <- lapply(mask, function(x) { # remove non-required variables
     x[setdiff(names(x), c("Date",resVar_names))] <- NULL; return(x)
   }) 
-  for (sit in setdiff(names(sitNames_corresp),names(obs_list))) {
-    jul_BBCH90 <- tail(sim_final_converted$sim_list[[sit]]$Date_BBCH90,n=1)
-    Date_BBCH90 <- as.Date(as.numeric(jul_BBCH90),
-                            origin=paste0(filter(template_df_ext,Number==as.numeric(sit))["year_sowing"]-1,"-12-31"),
-                            format="%Y-%m-%d")[[1]]
-    mask[[sit]] <- data.frame(Date=Date_BBCH90, 
-                              t(setNames(rep(0,length(resVar_names)), nm=resVar_names)))
+  for (sit in setdiff(as.character(template_df_ext$Number),names(obs_list))) {
+    mask[[sit]] <- dplyr::filter(template_df_ext,Number==sit) %>% dplyr::select(Date, resVar_names)
+    mask[[sit]][,resVar_names] <- 0
+  }
+
+  if (use_obs_synth) { # replace observed Harvest Date by simulated TRUE value of BBCH90
+    ref_date <- get_reference_date(descr_ref_date, template_path)
+    for (sit in names(mask)) {
+      jul_BBCH90 <- tail(sim_true$sim_list_converted[[sit]]$Date_BBCH90,n=1)
+      Date_BBCH90 <- as.Date(as.numeric(jul_BBCH90),
+                             origin=ref_date[[sit]],
+                             format="%Y-%m-%d")[[1]]
+      mask[[sit]][nrow(mask[[sit]]),"Date"] <- Date_BBCH90
+      ## check that the maturity date is posterior to the last observation date ...
+      ## in this case warn the user and set harvest date later
+      if (nrow(mask[[sit]]) > 1) {
+        if (mask[[sit]][nrow(mask[[sit]]),"Date"] <= mask[[sit]][nrow(mask[[sit]])-1,"Date"]) {
+          mask[[sit]][nrow(mask[[sit]]),"Date"] <- mask[[sit]][nrow(mask[[sit]])-1,"Date"] + 5
+        }
+      }
+    }
   }
   
+
   ## Intersect mask and simulated values
   obs_sim_list <- CroptimizR:::make_obsSim_consistent(sim_final_converted$sim_list,  
                                                       mask)
@@ -373,10 +402,15 @@ generate_obs_file <- function(obs_list, obsVar_units, obsVar_used,
                                           setdiff(names(template_df_ext), names(res_df))), 
                            by="Number") 
     
+  ## Retrieve information about Harvest date in res_df (= Date of synth obs, defined from synth TRUE obs ...)
+  index <- which(!duplicated(res_df$Number, fromLast = TRUE))
+  shifted_index <- shift(index)
+  shifted_index[1] <- 0
+  res_df_full$HarvestDate <- rep(res_df$Date[index],index-shifted_index)
+  res_df_full$HarvestYear <- year(res_df_full$HarvestDate)
+  
   ## Convert julian days in Dates
-  var_date <- names(res_df)[grepl("Date_",names(res_df))]   # TODO : change if HarvestDate is required ...
-                                                            # only the obs date variables are selected here for julian days transformation
-                                                            # i.e. not the one added from template_df ...
+  var_date <- names(res_df)[grepl("Date_",names(res_df))]   
   if ("Date_sowing" %in% names(res_df_full)) {
     res_df_full <- rename(res_df_full, Date_sowing="SowingDate")
   }
