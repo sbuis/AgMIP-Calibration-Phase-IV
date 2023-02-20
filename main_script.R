@@ -87,6 +87,10 @@ if (test_case=="French") {
              "\nShould be \"French\" or \"Australian\", please correct the content of the test_case variable at the beginning of main_script.R."))
 }
 
+																					# Give here the type of reference date used for computing julian days for phenological stage
+# should be equal to "SowingYear" if julian days are computed from the beginning of the sowing year
+# or "SowingDate" if julian days are computed from the sowing date
+descr_ref_date <- "SowingYear"
 ###### end of initialization step => the following should not be changed #######
 ################################################################################
 
@@ -107,7 +111,7 @@ true_param_values <- protocol_descr$true_param_values
 # Load the observations
 suffix <- NULL
 if (test_case=="French") suffix <- paste0("_",variety)
-if (data_without_Minnipa) {
+if (test_case=="Australian" & data_without_Minnipa) {
   obs_data_folder <- "data_without_Minnipa"
 } else {
   obs_data_folder <- "data"
@@ -156,7 +160,7 @@ if (use_obs_synth) {
                                   model_options, sitNames_corresp, 
                                   reqVar_Wrapper, converted_obs_list, transform_sim,
                                   simVar_units, varNames_corresp, obsVar_units,  
-                                  obs_list, obsVar_used, noise_sd, sowing_jul_obs)									
+                                  obs_list, obsVar_used, noise_sd, descr_ref_date)									
   obs_list <- obs_synth$obs_list
   converted_obs_list <- obs_synth$converted_obs_list
   
@@ -481,7 +485,9 @@ generate_results_files(param_group, model_options,
                        obsVar_units, obsVar_used, 
                        template_path, out_dir, test_case, variety,
                        varNames_corresp, resVar_names, 
-                       forced_param_values)
+                       forced_param_values, use_obs_synth=use_obs_synth, 
+                       sim_true=sim_true, 
+                       descr_ref_date=descr_ref_date)
 # Copying script and protocol files in result folder
 file.copy(from=xls_path, to=out_dir, overwrite = TRUE)
 file.copy(from=rstudioapi::getSourceEditorContext()$path, to=out_dir, overwrite = TRUE)
