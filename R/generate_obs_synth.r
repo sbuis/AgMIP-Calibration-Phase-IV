@@ -3,7 +3,7 @@
 generate_obs_synth <- function(true_param_values, model_wrapper, model_options, sitNames_corresp, 
                                reqVar_Wrapper, converted_obs_list, transform_sim,
                                simVar_units, varNames_corresp, obsVar_units,  
-                               obs_list, obsVar_used, noise_sd=0, sowing_jul_obs) {
+                               obs_list, obsVar_used, noise_sd=0, descr_ref_date) {
   
   # run the model_wrapper from default parameter values
   sim_true <- run_wrapper(model_wrapper=model_wrapper, model_options=model_options,
@@ -14,10 +14,27 @@ generate_obs_synth <- function(true_param_values, model_wrapper, model_options, 
   sim_true$sim_list_converted <- convert_and_rename(sim_true$sim_list, sitNames_corresp, simVar_units, 
                                           varNames_corresp, obsVar_units)
   
-  
   # Extract simulated values corresponding to observation sites/dates
+  # ... except for harvest date for which the simulated date of maturity is used
+  ref_date <- get_reference_date(descr_ref_date, template_path)
+  mask <- obs_list
+  for (sit in names(mask)) {
+    jul_BBCH90 <- tail(sim_true$sim_list_converted[[sit]]$Date_BBCH90,n=1)
+    Date_BBCH90 <- as.Date(as.numeric(jul_BBCH90),
+                           origin=ref_date[[sit]],
+                           format="%Y-%m-%d")[[1]]
+    mask[[sit]][nrow(mask[[sit]]),"Date"] <- Date_BBCH90
+    ## check that the maturity date is posterior to the last observation date ...
+    ## in this case warn the user and set harvest date later
+    if (nrow(mask[[sit]]) > 1) {
+      if (mask[[sit]][nrow(mask[[sit]]),"Date"] <= mask[[sit]][nrow(mask[[sit]])-1,"Date"]) {
+        mask[[sit]][nrow(mask[[sit]]),"Date"] <- mask[[sit]][nrow(mask[[sit]])-1,"Date"] + 5
+      }
+    }
+  }
+  
   obs_sim_list <- CroptimizR:::make_obsSim_consistent(sim_true$sim_list_converted,  
-                                                      obs_list)
+                                                      mask)
   res <- CroptimizR:::intersect_sim_obs(sim_list = obs_sim_list$sim_list,
                                         obs_list = obs_sim_list$obs_list)
   obs_list_synth_true <- lapply(names(res$sim_list), function(sit) {
@@ -41,59 +58,25 @@ generate_obs_synth <- function(true_param_values, model_wrapper, model_options, 
     stop("Error generating synthetic observations: number of observations are different between synthetic and real observations.")
   }
             
-  # Add gaussian noise
-  ## for the dates, gaussian noise is computed for julian days from sowing ...
-  ### so first transform to julian days from sowing ...
+  # Add (truncated) gaussian noise
   var_dates <- obsVar_used[grepl("Date",obsVar_used)]
-  units(sowing_jul_obs) <- "d"
-  obs_list_synth_from_sowing <- lapply(names(obs_list_synth_true), function(sit) {
-    obs_list_synth_true[[sit]] %>% 
-      mutate(sowing_jul_obs = sowing_jul_obs[sit]) %>%
-      mutate(across(intersect(names(.),var_dates), 
-                    ~ .x - .data$sowing_jul_obs[sit]))
+  var_others <- setdiff(obsVar_used, var_dates)
+  if (noise_sd>0) {
+    obs_list_synth <- lapply(obs_list_synth_true, function(x) {
+      x %>% 
+        mutate(across(
+          intersect(names(x),var_dates), 
+          ~ .x + as_units(truncnorm::rtruncnorm(length(.x), a=-6 , b=6, sd=2),"d")
+        )) %>%
+        mutate(across(
+          intersect(names(x),var_others), 
+          ~ .x + .x * truncnorm::rtruncnorm(length(.x), a=-3*noise_sd , b=3*noise_sd, sd=noise_sd)
+        ))
+    }
+    )
+  } else {
+    obs_list_synth <- obs_list_synth_true
   }
-  )
-  names(obs_list_synth_from_sowing) <- names(obs_list_synth_true)
-  ### then compute and add the noise  ...
-  obs_list_synth_from_sowing <- lapply(obs_list_synth_from_sowing, function(x) {
-    x %>% mutate(across(
-      intersect(names(x),obsVar_used), 
-      ~ .x + .x * rnorm(length(.x), sd = noise_sd)
-    ))
-  }
-  )
-  ### then transform to jul days from the given origin  ...
-  obs_list_synth <- lapply(names(obs_list_synth_from_sowing), function(sit) {
-    obs_list_synth_from_sowing[[sit]] %>% 
-      mutate(across(intersect(names(.),var_dates), 
-                    ~ .x + .data$sowing_jul_obs[sit])) %>%
-      select(-sowing_jul_obs)
-  }
-  )
-  names(obs_list_synth) <- names(obs_list_synth_from_sowing)
-  
-  
-  
-  # sim_synth <- sim_true
-  # tmp <- lapply(names(sim_synth$sim_list_converted), function(x) {
-  #   common_var <- intersect(names(sim_synth$sim_list_converted[[x]]), 
-  #             names(obs_list_synth[[x]]))
-  #   if (!is.null(common_var)) {
-  #     common_dates <- intersect(sim_synth$sim_list_converted[[x]]$Date, 
-  #                               obs_list_synth[[x]]$Date)
-  #     sim_synth$sim_list_converted[[x]][match(common_dates,sim_synth$sim_list_converted[[x]]$Date), common_var] <- 
-  #       obs_list_synth[[x]][match(common_dates,obs_list_synth[[x]]$Date), common_var]
-  #   }
-  #   sim_synth$sim_list_converted[[x]]
-  # })
-  # names(tmp) <- names(sim_synth$sim_list_converted)
-  # sim_synth$sim_list_converted <- tmp
-  # attr(sim_synth$sim_list_converted, "class") <- "cropr_simulation"
-  # generate_cal_results(sim_synth, obs_list, obsVar_units, obsVar_used, 
-  #                      sitNames_corresp, template_path, 
-  #                      out_dir, test_case, 
-  #                      variety="Janz", varNames_corresp, resVar_names, 
-  #                      file_type="synth_values")
   
   # Convert obs_list_synth to simulated names and units
   converted_obs_list_true <- obs_list_synth_true
@@ -118,7 +101,8 @@ generate_obs_synth <- function(true_param_values, model_wrapper, model_options, 
                        sitNames_corresp, template_path, 
                        out_dir, test_case, 
                        variety, varNames_corresp, resVar_names, 
-                       file_type="true_values")
+                       file_type="true_values", use_obs_synth=TRUE, sim_true=sim_true, 
+                       descr_ref_date=descr_ref_date)
   generate_obs_file(obs_list_synth_true, obsVar_units, obsVar_used, 
                     sitNames_corresp, obs_data_path, out_dir, test_case, 
                     variety, varNames_corresp, resVar_names, file_type="true_values")
@@ -147,6 +131,6 @@ generate_obs_synth <- function(true_param_values, model_wrapper, model_options, 
     stop(paste("Error generating synthetic observations: difference between observations and simulations is not null in the observation space: diff=",diff))
   }
   
-  return(list(obs_list=obs_list_synth, converted_obs_list=converted_obs_list))
+  return(list(obs_list=obs_list_synth, converted_obs_list=converted_obs_list, sim_true=sim_true))
 
 }

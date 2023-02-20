@@ -32,7 +32,11 @@ install_load <- function() {
     install.packages("rstudioapi")
     library("rstudioapi")
   }
-   
+  if(!require("truncnorm")){
+    install.packages("truncnorm")
+    library("truncnorm")
+  }
+  
   
   invisible(lapply(list.files(file.path(here(),"R"), full.names=TRUE), function(x) source(x)))
   
