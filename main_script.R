@@ -87,7 +87,7 @@ if (test_case=="French") {
              "\nShould be \"French\" or \"Australian\", please correct the content of the test_case variable at the beginning of main_script.R."))
 }
 
-																					# Give here the type of reference date used for computing julian days for phenological stage
+# Give here the type of reference date used for computing julian days for phenological stage
 # should be equal to "SowingYear" if julian days are computed from the beginning of the sowing year
 # or "SowingDate" if julian days are computed from the sowing date
 descr_ref_date <- "SowingYear"
