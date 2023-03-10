@@ -153,6 +153,7 @@ if (!all(names(varNames_corresp) %in% unique(c(obsVar_names, resVar_names))))
 #  transform_inputs - transform_outputs)
 reqVar_Wrapper <- setdiff(c(varNames_corresp,transform_inputs),transform_outputs)
 
+sim_true <- NULL				
 if (use_obs_synth) {
   
   obs_synth <- generate_obs_synth(true_param_values=c(true_param_values), 
@@ -163,6 +164,7 @@ if (use_obs_synth) {
                                   obs_list, obsVar_used, noise_sd, descr_ref_date)									
   obs_list <- obs_synth$obs_list
   converted_obs_list <- obs_synth$converted_obs_list
+  sim_true <- obs_synth$sim_true								
   
 } 
 
