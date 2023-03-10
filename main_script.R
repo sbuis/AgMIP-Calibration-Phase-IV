@@ -31,7 +31,12 @@ test_case <- "Australian"
 variety <- "Janz"
 
 # Set-up your model wrapper
-model_wrapper <- 
+## Give here the name of your model (just used for naming some output files)
+model_name <- "my_model_name"
+## Source the file including your model wrapper
+source("path_to_my_model_wrapper")
+## Give here the link to your model wrapper function  
+model_wrapper <- my_model_wrapper_function
 
 # Define model_options depending on your model wrapper
 model_options <- 
