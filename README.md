@@ -22,12 +22,12 @@ main_script.R automatically applies and chains the different steps of the AgMIP 
 
   * download the repository (green button "Code" => "Download zip") and unzip it.
   
-  * open the R project AgMIP-Calibration-Phase-IV in RStudio
+  * open the R project AgMIP-Calibration-Phase-IV in RStudio (using RStudio is mandatory for using the provided scripts)
   
   * install appropriate versions of CroptimizR and CroPlotR by executing the commands:
   
     * devtools::install_github("SticsRPacks/CroptimizR@AgMIP_phaseIV")
-    * devtools::install_github("SticsRPacks/CroPlotR@4018d25")
+    * devtools::install_github("SticsRPacks/CroPlotR@*release")
   
   * define the protocol_descr_****.xls files as indicated in the word document sent by the co-leaders
   
