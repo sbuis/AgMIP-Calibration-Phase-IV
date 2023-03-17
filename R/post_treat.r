@@ -229,7 +229,12 @@ generate_results_files <- function(param_group, model_options,
     
   }
   
-  # Generate cal_4_results_* files for each iteration
+  # Generate cal_4_results_* files for each iteration plus default values
+  generate_cal_results(sim_default, obs_list, obsVar_units, obsVar_used, 
+                       sitNames_corresp, template_path, out_dir, test_case, 
+                       variety, varNames_corresp, resVar_names, "default_values",
+                       use_obs_synth=use_obs_synth, sim_true=sim_true, 
+                       descr_ref_date=descr_ref_date)
   generate_cal_results(sim_it1, obs_list, obsVar_units, obsVar_used, 
                        sitNames_corresp, template_path, out_dir, test_case, 
                        variety, varNames_corresp, resVar_names, paste0(file_type,"_it1"),
