@@ -218,7 +218,7 @@ generate_results_files <- function(param_group, model_options,
     # Intercalate Default and final values
     #### Join the Table and relocate columns
     stats_all <- dplyr::full_join(stats, stats_default, by="Name of the variable") %>% 
-      dplyr::relocate(ordered_columns)
+      dplyr::relocate(dplyr::all_of(ordered_columns))
  
     save_table(table=stats_all, table_name=paste0("Table_variables_Iteration",it), 
                path=out_dir)
@@ -250,6 +250,28 @@ generate_results_files <- function(param_group, model_options,
                        variety, varNames_corresp, resVar_names, paste0(file_type,"_final"),
                        use_obs_synth=use_obs_synth, sim_true=sim_true, 
                        descr_ref_date=descr_ref_date)
+
+  # Same but using simulated date for maturity instead of observed date
+  generate_cal_results(sim_default, obs_list, obsVar_units, obsVar_used, 
+                       sitNames_corresp, template_path, out_dir, test_case, 
+                       variety, varNames_corresp, resVar_names, "default_values_simulated_mat",
+                       use_obs_synth=use_obs_synth, sim_true=sim_true, 
+                       descr_ref_date=descr_ref_date, flag_true_mat=FALSE)
+  generate_cal_results(sim_it1, obs_list, obsVar_units, obsVar_used, 
+                       sitNames_corresp, template_path, out_dir, test_case, 
+                       variety, varNames_corresp, resVar_names, paste0(file_type,"_it1_simulated_mat"),
+                       use_obs_synth=use_obs_synth, sim_true=sim_true, 
+                       descr_ref_date=descr_ref_date, flag_true_mat=FALSE)
+  generate_cal_results(sim_it2, obs_list, obsVar_units, obsVar_used, 
+                       sitNames_corresp, template_path, out_dir, test_case, 
+                       variety, varNames_corresp, resVar_names,  paste0(file_type,"_it2_simulated_mat"),
+                       use_obs_synth=use_obs_synth, sim_true=sim_true, 
+                       descr_ref_date=descr_ref_date, flag_true_mat=FALSE)
+  generate_cal_results(sim_final, obs_list, obsVar_units, obsVar_used, 
+                       sitNames_corresp, template_path, out_dir, test_case, 
+                       variety, varNames_corresp, resVar_names, paste0(file_type,"_final_simulated_mat"),
+                       use_obs_synth=use_obs_synth, sim_true=sim_true, 
+                       descr_ref_date=descr_ref_date, flag_true_mat=FALSE)
   
 }
 
@@ -257,7 +279,8 @@ generate_results_files <- function(param_group, model_options,
 generate_cal_results <- function(sim_final, obs_list, obsVar_units, obsVar_used, 
                                  sitNames_corresp, template_path, out_dir, test_case, 
                                  variety,varNames_corresp, resVar_names, file_type,
-                                 use_obs_synth=FALSE, sim_true=NULL, descr_ref_date=NULL) {
+                                 use_obs_synth=FALSE, sim_true=NULL, descr_ref_date=NULL,
+                                 flag_true_mat=TRUE) {
   
   # Convert simulations to observation space (names of situations and variables, units) if necessary
   if (is.null(sim_final$sim_list_converted)) {
@@ -315,7 +338,11 @@ generate_cal_results <- function(sim_final, obs_list, obsVar_units, obsVar_used,
   if (use_obs_synth) { # replace observed Harvest Date by simulated TRUE value of BBCH90
     ref_date <- get_reference_date(descr_ref_date, template_path)
     for (sit in names(mask)) {
-      jul_BBCH90 <- tail(sim_true$sim_list_converted[[sit]]$Date_BBCH90,n=1)
+      if (flag_true_mat) {
+        jul_BBCH90 <- tail(sim_true$sim_list_converted[[sit]]$Date_BBCH90,n=1)
+      } else {
+        jul_BBCH90 <- tail(sim_final$sim_list[[sitNames_corresp[[sit]]]][[varNames_corresp[["Date_BBCH90"]]]],n=1)
+      }
       Date_BBCH90 <- as.Date(as.numeric(jul_BBCH90),
                              origin=ref_date[[sit]],
                              format="%Y-%m-%d")[[1]]
