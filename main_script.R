@@ -20,6 +20,8 @@ beta <- 0.3 # level of perturbation of parameters values : 0.3 or 0.6
 noise_sd <- 0 # sd of gaussian noise added to synthetic observations (in percentage, set 0 or 0.1)
 seed <- 1234 # seed for random number generation. Set it to a constant value for an exact replicate of the experiment. Change its value to change random number generation and thus synthetic observations and default parameters values.
 
+flag_eos <- TRUE # TRUE to compare simulated and observed final values of biomass and Yield on 31/12/harvestYear, 
+                 # FALSE to compare them at harvest date
 # Set TRUE to remove Minnipa observations, FALSE otherwise
 data_without_Minnipa <- TRUE
 
@@ -166,7 +168,8 @@ if (use_obs_synth) {
                                   model_options, sitNames_corresp, 
                                   reqVar_Wrapper, converted_obs_list, transform_sim,
                                   simVar_units, varNames_corresp, obsVar_units,  
-                                  obs_list, obsVar_used, noise_sd, descr_ref_date)									
+                                  obs_list, obsVar_used, noise_sd, descr_ref_date,
+                                  flag_eos)									
   obs_list <- obs_synth$obs_list
   converted_obs_list <- obs_synth$converted_obs_list
   sim_true <- obs_synth$sim_true								
@@ -494,7 +497,7 @@ generate_results_files(param_group, model_options,
                        varNames_corresp, resVar_names, 
                        forced_param_values, use_obs_synth=use_obs_synth, 
                        sim_true=sim_true, 
-                       descr_ref_date=descr_ref_date)
+                       descr_ref_date=descr_ref_date, flag_eos=flag_eos)
 # Copying script and protocol files in result folder
 file.copy(from=xls_path, to=out_dir, overwrite = TRUE)
 file.copy(from=rstudioapi::getSourceEditorContext()$path, to=out_dir, overwrite = TRUE)

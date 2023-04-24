@@ -3,7 +3,8 @@
 generate_obs_synth <- function(true_param_values, model_wrapper, model_options, sitNames_corresp, 
                                reqVar_Wrapper, converted_obs_list, transform_sim,
                                simVar_units, varNames_corresp, obsVar_units,  
-                               obs_list, obsVar_used, noise_sd=0, descr_ref_date) {
+                               obs_list, obsVar_used, noise_sd=0, descr_ref_date,
+                               flag_eos=FALSE) {
   
   # run the model_wrapper from default parameter values
   sim_true <- run_wrapper(model_wrapper=model_wrapper, model_options=model_options,
@@ -19,11 +20,20 @@ generate_obs_synth <- function(true_param_values, model_wrapper, model_options, 
   ref_date <- get_reference_date(descr_ref_date, template_path)
   mask <- obs_list
   for (sit in names(mask)) {
-    jul_BBCH90 <- tail(sim_true$sim_list_converted[[sit]]$Date_BBCH90,n=1)
-    Date_BBCH90 <- as.Date(as.numeric(jul_BBCH90),
-                           origin=ref_date[[sit]],
-                           format="%Y-%m-%d")[[1]]
-    mask[[sit]][nrow(mask[[sit]]),"Date"] <- Date_BBCH90
+    if (flag_eos) { # eos_date is set to 31/12/harvestYear
+      harvestYear <- format(tail(sim_true$sim_list_converted[[sit]]$Date,n=1), format="%Y")
+      eos_Date <- as.Date(paste0(harvestYear,"-12-31"), format="%Y-%m-%d")[[1]]
+                   # except for "Lake_2010_***" since there's not enough weather data ...
+      if (sit %in% names(sitNames_corresp[grep("Lake-2010",sitNames_corresp)])) {
+        eos_Date <- as.Date("2011-01-30", format="%Y-%m-%d")[[1]]
+      }
+    } else { # eos_date is set to TRUE value of maturity date
+      jul_BBCH90 <- tail(sim_true$sim_list_converted[[sit]]$Date_BBCH90,n=1)
+      eos_Date <- as.Date(as.numeric(jul_BBCH90),
+                             origin=ref_date[[sit]],
+                             format="%Y-%m-%d")[[1]]
+    }
+    mask[[sit]][nrow(mask[[sit]]),"Date"] <- eos_Date
     ## check that the maturity date is posterior to the last observation date ...
     ## in this case warn the user and set harvest date later
     if (nrow(mask[[sit]]) > 1) {
@@ -102,7 +112,7 @@ generate_obs_synth <- function(true_param_values, model_wrapper, model_options, 
                        out_dir, test_case, 
                        variety, varNames_corresp, resVar_names, 
                        file_type="true_values", use_obs_synth=TRUE, sim_true=sim_true, 
-                       descr_ref_date=descr_ref_date)
+                       descr_ref_date=descr_ref_date, flag_eos=flag_eos)
   generate_obs_file(obs_list_synth_true, obsVar_units, obsVar_used, 
                     sitNames_corresp, obs_data_path, out_dir, test_case, 
                     variety, varNames_corresp, resVar_names, file_type="true_values")
