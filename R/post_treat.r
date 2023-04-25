@@ -331,7 +331,7 @@ generate_cal_results <- function(sim_final, obs_list, obsVar_units, obsVar_used,
     x[setdiff(names(x), c("Date",resVar_names))] <- NULL; return(x)
   }) 
   for (sit in setdiff(as.character(template_df_ext$Number),names(obs_list))) {
-    mask[[sit]] <- dplyr::filter(template_df_ext,Number==sit) %>% dplyr::select(Date, resVar_names)
+    mask[[sit]] <- dplyr::filter(template_df_ext,Number==sit) %>% dplyr::select(Date, dplyr::all_of(resVar_names))
     mask[[sit]][,resVar_names] <- 0
   }
 
