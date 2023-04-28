@@ -1,0 +1,12 @@
+Column name;Original name;Definition;Unit;Group
+Date_BBCH10;-;Date of emergence;dd/mm/yyyy;NA
+Date_BBCH30;Date_observée_Epi_1cm;Date observed stem 1 cm. This is stage BBCH30 (beginning of stem elongation);dd/mm/yyyy;phenology
+Date_BBCH55;Date_observée_Epiaison;This is stage BBCH55 (50% heading);dd/mm/yyyy;phenology
+Date_BBCH90;-;Date of stage BBCH90;dd/mm/yyyy;NA
+HarvestDate;-;Date of harvest;dd/mm/yyyy;NA
+Biomass;Biomasse aérienne;Aboveground biomass;g m-2;plant_biomass
+EarsPerSqM;Epis par m² Floraison;Ears per m2;m-2;ears
+Grain_Number;-;grains per square meter;m-2;grain_number
+ProteinContentGrain;Teneur protéines Récolte;Protein content at harvest. 0 means missing data. ;%;seed_protein
+N_in_biomassHarvest;Teneur azote aérien Récolte machine;Airborne nitrogen content at Machine harvest ;%;plant_N_content
+Grain_Yield;Biomasse grain;Dry weight of grain at harvest;g m-2;yield
