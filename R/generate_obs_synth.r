@@ -33,14 +33,16 @@ generate_obs_synth <- function(true_param_values, model_wrapper, model_options, 
                              origin=ref_date[[sit]],
                              format="%Y-%m-%d")[[1]]
     }
-    mask[[sit]][nrow(mask[[sit]]),"Date"] <- eos_Date
     ## check that the maturity date is posterior to the last observation date ...
-    ## in this case warn the user and set harvest date later
+    ## Otherwise, warn the user and set harvest date later
     if (nrow(mask[[sit]]) > 1) {
-      if (mask[[sit]][nrow(mask[[sit]]),"Date"] <= mask[[sit]][nrow(mask[[sit]])-1,"Date"]) {
-        mask[[sit]][nrow(mask[[sit]]),"Date"] <- mask[[sit]][nrow(mask[[sit]])-1,"Date"] + 5
+      if (eos_Date <= mask[[sit]][nrow(mask[[sit]])-1,"Date"]) {
+        eos_Date <- mask[[sit]][nrow(mask[[sit]]),"Date"]
+        warning(paste("Simulated maturity date is before penultimate observation date for situation",
+                      sit,".\n It will be set to last observation date in the synthetic experiments."))
       }
     }
+    mask[[sit]][nrow(mask[[sit]]),"Date"] <- eos_Date
   }
   
   obs_sim_list <- CroptimizR:::make_obsSim_consistent(sim_true$sim_list_converted,  
@@ -62,9 +64,9 @@ generate_obs_synth <- function(true_param_values, model_wrapper, model_options, 
   obs_df <- as.data.frame(bind_rows(obs_list))
   obs_synth_nb <- dplyr::summarise(obs_synth_df, across(.fns=function(x) sum(!is.na(x))))
   obs_real_nb <- dplyr::summarise(obs_df, across(.fns=function(x) sum(!is.na(x))))
-  if (!identical(obs_synth_nb[,names(obs_real_nb)],obs_real_nb)) {
-    print(obs_synth_nb[,names(obs_real_nb)])
-    print(obs_real_nb)
+  if (!identical(obs_synth_nb[,obsVar_used],obs_real_nb[obsVar_used])) {
+    print(obs_synth_nb[,obsVar_used])
+    print(obs_real_nb[obsVar_used])
     stop("Error generating synthetic observations: number of observations are different between synthetic and real observations.")
   }
             
