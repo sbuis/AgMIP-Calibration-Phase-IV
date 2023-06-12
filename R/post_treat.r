@@ -1,7 +1,7 @@
 generate_results_files <- function(param_group, model_options, 
-                                   complem_info, res_it2, res_it3,
+                                   complem_info, res_it2,
                                    sitNames_corresp, 
-                                   sim_default, sim_it1, sim_it2, sim_final, 
+                                   sim_default, sim_it1, sim_it2, 
                                    obs_list, converted_obs_list,
                                    obsVar_units, obsVar_used, 
                                    template_path, out_dir, test_case, variety,
@@ -26,15 +26,13 @@ generate_results_files <- function(param_group, model_options,
   }
   save_table(table=Table, table_name="Table_parameters_Iteration1", path=out_dir)
 
-  ## Iteration 2 and 3 
-  for (it in 2:3) {
-    load(file.path(out_dir,paste0("Iteration",it),"optim_results.Rdata"))
-    Table <- generate_parameters_table(res, group_names, forced_param_values)
-    save_table(table=Table, 
-               table_name=paste0("Table_parameters_Iteration",it), 
-               path=out_dir)
-  }  
-  
+  ## Iteration 2
+  load(file.path(out_dir,"Iteration2","optim_results.Rdata"))
+  Table <- generate_parameters_table(res, group_names, forced_param_values)
+  save_table(table=Table, 
+             table_name="Table_parameters_Iteration2", 
+             path=out_dir)
+
 
   # Tables of steps for each iteration
   # ----------------------------------
@@ -87,32 +85,28 @@ generate_results_files <- function(param_group, model_options,
   save_table(table=Table, table_name="Table_steps_Iteration1", path=out_dir)
   
   
-  ## Iteration 2 and 3 
+  ## Iteration 2
+  load(file.path(out_dir,"Iteration2","optim_results.Rdata"))
+  estimated_parameters <- names(res$final_values)
+  Table <- setNames(
+    tibble(list(names(res$final_values)),
+           nrow(res$init_values),
+           filter(res$params_and_crit,rep==res$ind_min_crit)$crit[1],
+           res$min_crit_value,
+           nrow(res$params_and_crit),
+           res$total_time/3600),
+    nm=c("Name of the estimated parameters",
+         "Number of starting values",
+         "Initial value of the minimized criterion",
+         "Final value of the minimized criterion",
+         "Total number of calls to model",
+         "Simulation time (h)")
+  )
+  save_table(table=Table, 
+             table_name="Table_steps_Iteration2", 
+             path=out_dir)
   
-  for (it in 2:3) {
-    
-    load(file.path(out_dir,paste0("Iteration",it),"optim_results.Rdata"))
-    estimated_parameters <- names(res$final_values)
-    Table <- setNames(
-      tibble(list(names(res$final_values)),
-             nrow(res$init_values),
-             filter(res$params_and_crit,rep==res$ind_min_crit)$crit[1],
-             res$min_crit_value,
-             nrow(res$params_and_crit),
-             res$total_time/3600),
-      nm=c("Name of the estimated parameters",
-           "Number of starting values",
-           "Initial value of the minimized criterion",
-           "Final value of the minimized criterion",
-           "Total number of calls to model",
-           "Simulation time (h)")
-    )
-    save_table(table=Table, 
-               table_name=paste0("Table_steps_Iteration",it), 
-               path=out_dir)
-    
-  }  
-  
+
 
   # Tables of stats per variable for each iteration
   # -----------------------------------------------
@@ -146,7 +140,7 @@ generate_results_files <- function(param_group, model_options,
     stats_default <- dplyr::union(stats_default, stats_transformed)
   }
   
-  for (it in c("1", "2", "3")) {
+  for (it in c("1", "2")) {
  
     if (it=="3") {
       sim <- sim_final
@@ -177,7 +171,7 @@ generate_results_files <- function(param_group, model_options,
       stats <- dplyr::union(stats, stats_transformed)
     }
 
-    # Compute weighted SSE per variable for iteration 2 and 3
+    # Compute weighted SSE per variable for iteration 2
     if (it != "1") {
       eval(parse(text=paste0("model_error_sd <- complem_info$it",it,"$weight")))
       simVar_units_square <- paste(simVar_units,simVar_units)
@@ -245,11 +239,6 @@ generate_results_files <- function(param_group, model_options,
                        variety, varNames_corresp, resVar_names,  paste0(file_type,"_it2"),
                        use_obs_synth=use_obs_synth, sim_true=sim_true, 
                        descr_ref_date=descr_ref_date, flag_eos=flag_eos)
-  generate_cal_results(sim_final, obs_list, obsVar_units, obsVar_used, 
-                       sitNames_corresp, template_path, out_dir, test_case, 
-                       variety, varNames_corresp, resVar_names, paste0(file_type,"_final"),
-                       use_obs_synth=use_obs_synth, sim_true=sim_true, 
-                       descr_ref_date=descr_ref_date, flag_eos=flag_eos)
 
   # Same but using simulated date for maturity instead of observed date
   generate_cal_results(sim_default, obs_list, obsVar_units, obsVar_used, 
@@ -267,12 +256,6 @@ generate_results_files <- function(param_group, model_options,
                        variety, varNames_corresp, resVar_names,  paste0(file_type,"_it2_simulated_mat"),
                        use_obs_synth=use_obs_synth, sim_true=sim_true, 
                        descr_ref_date=descr_ref_date, flag_true_mat=FALSE, flag_eos=flag_eos)
-  generate_cal_results(sim_final, obs_list, obsVar_units, obsVar_used, 
-                       sitNames_corresp, template_path, out_dir, test_case, 
-                       variety, varNames_corresp, resVar_names, paste0(file_type,"_final_simulated_mat"),
-                       use_obs_synth=use_obs_synth, sim_true=sim_true, 
-                       descr_ref_date=descr_ref_date, flag_true_mat=FALSE, flag_eos=flag_eos)
-  
 }
 
 
