@@ -113,6 +113,7 @@ param_info <- protocol_descr$param_info
 forced_param_values <- protocol_descr$default_param_values 
 param_group <- protocol_descr$param_group # list of params to estimate per group
 obsVar_group <- protocol_descr$obsVar_group # groups of observed variables used in the calibration
+converted_obsVar_group <- setNames(obsVar_group,nm=varNames_corresp[names(obsVar_group)])													  
 true_param_values <- protocol_descr$true_param_values 		   
 
 # Load the observations
@@ -176,11 +177,6 @@ if (use_obs_synth) {
   
 } 
 
-# Define number of repetitions and evaluations
-nb_rep_it1 <- c(20, 5)
-nb_rep_it2 <- 20
-nb_rep_it3 <- 20
-maxeval <- 5000
 
 # In debug mode reduce number of evaluations, situations, repetitions, candidate parameters, ...
 if (debug) {
@@ -196,10 +192,7 @@ if (debug) {
     if (!is.null(param_group[[gr]]$candidates)) 
       param_group[[gr]]$candidates <- param_group[[gr]]$candidates[1]
   }
-  nb_rep_it1 <- c(2, 2)
-  nb_rep_it2 <- 2
-  nb_rep_it3 <- 2
-  maxeval=3
+
 }
 
 # Save configuration
@@ -209,9 +202,9 @@ save.image(file=file.path(out_dir,"config.Rdata"))
 # Initialize some local variables 
 flag_checkpoint <- FALSE
 igr <- 0
-res_it1 <- list(); res_it1_tmp <- NULL; res_it2 <- NULL; res_it3 <- NULL
-weight_it2 <- NULL; weight_it3 <- NULL
-complem_info <- list(it1=list(), it2=list(), it3=list())
+res_it1 <- list(); res_it1_tmp <- NULL; res_it2 <- NULL; 
+weight_it2 <- NULL; 
+complem_info <- list(it1=list(), it2=list())
 
 if (file.exists(file.path(out_dir,"checkpoint.Rdata"))) load(file.path(out_dir,"checkpoint.Rdata"))
 
@@ -233,8 +226,6 @@ CroPlotR::save_plot_pdf(p, out_dir, file_name = "scatterPlots_default")
 cat("\n----- Parameter estimation Iteration 1\n")
 cat("--------------------------------------\n")
 
-optim_options=list(nb_rep=nb_rep_it1, maxeval=maxeval, ranseed=seed, xtol_rel=1e-4, ftol_rel=1e-4)
-
 transform_var <- eval(parse(text=paste0("c(",varNames_corresp[["Biomass"]],
                                         "=function(x) log(x+.Machine$double.xmin))")))
 
@@ -254,8 +245,6 @@ while (igr < length(param_group)) {
   crt_params <- c(param_group[[gr]]$obligatory, param_group[[gr]]$candidates)
   crt_param_info <- lapply(param_info,function(x) x[crt_params])
 
-  optim_options$out_dir <- file.path(out_dir,"Iteration1",paste0("group_",gr))
-  
   ## Define parameters to force (estimated values for the parameters previously selected,
   ##                            default values for the others, exclude the current candidate 
   ##                            parameters)
@@ -265,6 +254,19 @@ while (igr < length(param_group)) {
     crt_forced_param_values[names(res_it1_tmp$final_values)] <- res_it1_tmp$final_values
   }
   crt_forced_param_values[param_group[[gr]]$obligatory] <- NULL
+  
+  # Optimization options (depends on the number of obligatory parameters)
+  # Define number of repetitions and evaluations
+  nb_rep_it1 <- c(10,5)
+  if (param_group[[gr]]$obligatory>1) nb_rep_it1 <- c(20,5)
+  maxeval <- 50000
+  if (debug) {
+    nb_rep_it1 <- c(1,1)
+    maxeval=10
+  }
+  optim_options=list(nb_rep=nb_rep_it1, maxeval=maxeval, ranseed=seed, xtol_rel=1e-4, 
+                     ftol_rel=1e-4, 
+                     out_dir=file.path(out_dir,"Iteration1",paste0("group_",gr)))
   
   crit_function <- function(sim_list, obs_list) {
     crit <- crit_ols(sim_list, obs_list)
@@ -285,7 +287,8 @@ while (igr < length(param_group)) {
                      param_info=crt_param_info, candidate_param=param_group[[gr]]$candidates,
                      forced_param_values=crt_forced_param_values, 
                      transform_var=transform_var,
-                     transform_sim=transform_sim, var=reqVar_Wrapper)
+                     transform_sim=transform_sim, var=reqVar_Wrapper,
+                     info_crit_func = list(CroptimizR::AICc, CroptimizR::BIC))
   
   # Run model wrapper using parameter values estimated at this step
   sim_it1_tmp <- run_wrapper(model_wrapper = model_wrapper,
@@ -348,6 +351,12 @@ save(sim_default, res_it1, sim_it1, igr, crt_forced_param_values,
 cat("\n----- Parameter estimation Iteration 2\n")
 cat("--------------------------------------\n")
 
+nb_rep_it2 <- 20
+maxeval <- 50000
+if (debug) {
+  nb_rep_it2 <- 1
+  maxeval=10
+}
 optim_options=list(nb_rep=nb_rep_it2, maxeval=maxeval, ranseed=seed, xtol_rel=1e-4, ftol_rel=1e-4)
 
 # List of parameters to estimate as selected in iteration 1
@@ -369,9 +378,13 @@ if (is.null(res_it2)) {
   ## apply transformation to sim_it1 first
   sim_it1_transformed <- apply_transform_var(sim_it1$sim_list, transform_var)				
   crit_function <- function(sim_list, obs_list) {
-    weight <- setNames(
-      summary(sim_it1_transformed, obs=obs_list, stats = c("RMSE"))$RMSE,
-      nm=summary(sim_it1_transformed, obs=obs_list, stats = c("RMSE"))$variable)
+    
+    stats <- summary(sim_it1_transformed, obs=obs_list, stats = c("n_obs","SS_res")) 
+    groups<-converted_obsVar_group[stats$variable]
+    stats <- mutate(stats, 
+                    p = sapply(groups,function(x) length(res_it1[[x]]$final_values)))
+    
+    weight <- sqrt(stats$SS_res/(stats$n_obs-stats$p))
     alpha <- 1
     weight_it2 <<- unique(bind_rows(weight_it2,alpha*weight[names(weight)!="Date"]))
     crit_wls(sim_list, obs_list, 
@@ -418,79 +431,14 @@ if (is.null(res_it2)) {
 
 
 
-# Parameter Estimation, Third iteration
-
-cat("\n----- Parameter estimation Iteration 3\n")
-cat("--------------------------------------\n")
-
-if (is.null(res_it3)) {
-  
-  optim_options=list(nb_rep=nb_rep_it3, maxeval=maxeval, ranseed=seed, xtol_rel=1e-4, ftol_rel=1e-4)
-
-  optim_options$out_dir <- file.path(out_dir,"Iteration3")
-
-  # Use estimated values of iteration 2 as initial values for 1st repetition
-  final_param_info$init_values <- res_it2$final_values
-    
-  # Define the criterion to minimize
-  ## apply transformation to sim_it2 first
-  sim_it2_transformed <- apply_transform_var(sim_it2$sim_list, transform_var)
-  crit_function <- function(sim_list, obs_list) {
-    weight <- setNames(
-      summary(sim_it2_transformed, obs=obs_list, stats = c("RMSE"))$RMSE,
-      nm=summary(sim_it2_transformed, obs=obs_list, stats = c("RMSE"))$variable)
-    alpha <- 1
-    weight_it3 <<- unique(bind_rows(weight_it3,alpha*weight[names(weight)!="Date"]))
-    crit_wls(sim_list, obs_list, 
-             weight=weight,
-             alpha=alpha)
-  }
-  
-  res_it3 <- estim_param(obs_list=converted_obs_list, 
-                         crit_function = crit_function,
-                         model_function=model_wrapper,
-                         model_options=model_options,
-                         optim_options=optim_options,
-                         param_info=final_param_info,
-                         forced_param_values=final_forced_param_values, 
-                         transform_var=transform_var,
-                         transform_sim=transform_sim, var=reqVar_Wrapper)
-  
-  # run the model_wrapper after final optimization
-  sim_final <- run_wrapper(model_wrapper = model_wrapper,
-                           model_options=model_options,
-                           param_values=c(res_it3$final_values, res_it3$forced_param_values),
-                           situation=sitNames_corresp, var=reqVar_Wrapper, 
-                           obs_list=converted_obs_list,
-                           transform_sim=transform_sim, transform_var=NULL)
-  
-  # ScatterPlots simulations VS obs after it3
-  sim_list_it3_converted <- convert_and_rename(sim_final$sim_list, sitNames_corresp, simVar_units, 
-                                               varNames_corresp, obsVar_units)
-  p <- plot(sim_list_it3_converted, obs=obs_list, type="scatter")
-  CroPlotR::save_plot_pdf(p, out_dir, file_name = "scatterPlots_it3")
-  
-  save(sim_default, res_it1, sim_it1, igr, res_it2, sim_it2, res_it3, sim_final,
-  file = file.path(out_dir,paste0("checkpoint_it3.Rdata")))
-  
-  complem_info$it3 <- list(forced_param_values=unlist(final_forced_param_values),
-                           obsVar_used=varNames_corresp[varNames_corresp %in% unlist(lapply(converted_obs_list,names))],
-                           converted_obs_list=converted_obs_list,
-                           weight=weight_it3, sim_it2=sim_it2)
-  save(complem_info, 
-       file = file.path(out_dir,paste0("complementary_info.Rdata")))
-  
-}  
-  
-
 # Generating diagnostics and results files using CroPlotR
 
 suffix <- NULL
 if (test_case=="French") suffix <- paste0("_",variety) 
 generate_results_files(param_group, model_options,  
-                       complem_info, res_it2, res_it3,
+                       complem_info, res_it2, 
                        sitNames_corresp, 
-                       sim_default, sim_it1, sim_it2, sim_final, 
+                       sim_default, sim_it1, sim_it2, 
                        obs_list, converted_obs_list,
                        obsVar_units, obsVar_used, 
                        template_path, out_dir, test_case, variety,
@@ -505,9 +453,9 @@ file.copy(from=rstudioapi::getSourceEditorContext()$path, to=out_dir, overwrite 
 # Displaying Results
 cat("\n----------------------\n")
 cat("Final values of estimated parameters:\n")
-print(res_it3$final_values)
+print(res_it2$final_values)
 cat("\nFixed values of the other parameters:\n")
-print(res_it3$forced_param_values)
+print(res_it2$forced_param_values)
 
 cat(paste("\nResults Tables and files required in Phase IV protocol as well as detailed additional results can be found in folder:",out_dir))
 
@@ -515,10 +463,9 @@ cat(paste("\nResults Tables and files required in Phase IV protocol as well as d
 cat("\nTotal time of parameter estimation process:\n")
 cat(paste("    Iteration 1:", sum(sapply(names(param_group), function(gr) res_it1[[gr]]$total_time))/3600, "hours elapsed\n"))
 cat(paste("    Iteration 2:", res_it2$total_time/3600, "hours elapsed\n"))
-cat(paste("    Iteration 3:", res_it3$total_time/3600, "hours elapsed\n"))
 cat(paste("    Total:", 
           (sum(sapply(names(param_group), function(gr) res_it1[[gr]]$total_time)) + 
-             res_it2$total_time+res_it3$total_time)/3600, 
+             res_it2$total_time)/3600, 
           "hours elapsed\n"))
 cat("----------------------\n")
 
