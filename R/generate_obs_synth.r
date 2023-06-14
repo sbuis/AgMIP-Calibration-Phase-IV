@@ -36,7 +36,7 @@ generate_obs_synth <- function(true_param_values, model_wrapper, model_options, 
     ## check that the maturity date is posterior to the last observation date ...
     ## Otherwise, warn the user and set harvest date later
     if (nrow(mask[[sit]]) > 1) {
-      if (eos_Date <= mask[[sit]][nrow(mask[[sit]])-1,"Date"]) {
+      if (eos_Date <= mask[[sit]][nrow(mask[[sit]])-1,"Date"][[1]]) {
         eos_Date <- mask[[sit]][nrow(mask[[sit]]),"Date"]
         warning(paste("Simulated maturity date is before penultimate observation date for situation",
                       sit,".\n It will be set to last observation date in the synthetic experiments."))
@@ -67,6 +67,7 @@ generate_obs_synth <- function(true_param_values, model_wrapper, model_options, 
   if (!identical(obs_synth_nb[,obsVar_used],obs_real_nb[obsVar_used])) {
     print(obs_synth_nb[,obsVar_used])
     print(obs_real_nb[obsVar_used])
+	save(obs_list_synth_true, obs_list, obs_synth_df, obs_df, file=file.path(out_dir, "debug_obs_synth.Rdata"))
     stop("Error generating synthetic observations: number of observations are different between synthetic and real observations.")
   }
             
