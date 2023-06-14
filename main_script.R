@@ -258,7 +258,7 @@ while (igr < length(param_group)) {
   # Optimization options (depends on the number of obligatory parameters)
   # Define number of repetitions and evaluations
   nb_rep_it1 <- c(10,5)
-  if (param_group[[gr]]$obligatory>1) nb_rep_it1 <- c(20,5)
+  if (length(param_group[[gr]]$obligatory)>1) nb_rep_it1 <- c(20,5)
   maxeval <- 50000
   if (debug) {
     nb_rep_it1 <- c(1,1)
