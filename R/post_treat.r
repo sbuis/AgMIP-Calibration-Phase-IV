@@ -62,7 +62,7 @@ generate_results_files <- function(param_group, model_options,
                nrow(res$init_values),
                filter(res$params_and_crit,rep==res$ind_min_crit)$crit[1],
                res$min_crit_value,
-               res$BIC,
+               res$AICc,
                nrow(res$params_and_crit),
                NA,
                ""),
@@ -70,13 +70,13 @@ generate_results_files <- function(param_group, model_options,
              "Number of starting values",
              "Initial value of the minimized criterion",
              "Final value of the minimized criterion",
-             "Final BIC", "Total number of calls to model",
+             "Final AICc", "Total number of calls to model",
              "Simulation time (h)",
              "Selected step")
       )
     })
     Table_gr <- bind_rows(Table_gr)
-    Table_gr[Table_gr[,"Final BIC"]==min(Table_gr[,"Final BIC"]),"Selected step"] <- "X"
+    Table_gr[Table_gr[,"Final AICc"]==min(Table_gr[,"Final AICc"]),"Selected step"] <- "X"
     load(file.path(out_dir,"Iteration1",paste0("group_",gr),"optim_results.Rdata"))
     Table_gr[nrow(Table_gr),"Simulation time (h)"] <- res$total_time/3600
     Table <- bind_rows(Table, Table_gr)
