@@ -5,8 +5,8 @@ load_protocol <- function(protocol_path, transform_outputs, use_obs_synth=FALSE,
   #   - varNames_corresp: correspondance between simulated and observed variables names
   #   - simVar_units: units of simulated variables
   #   - param_info: bounds of parameters to estimate
-  #   - default_param_values: default values of parameters to estimate and parameters to set to compute
-  #   - param_group: list of almost additive and candidate parameters to estimate
+  #   - default_param_values: default values of parameters to estimate and parameters to fix to compute
+  #   - param_group: list of major and candidate parameters to estimate
   
   check_protocol_structure(protocol_path)
   
@@ -34,24 +34,24 @@ load_protocol <- function(protocol_path, transform_outputs, use_obs_synth=FALSE,
                            nm = varNames_corresp_df$`Name of the simulated variable`)
   
   # Building param_info 
-  additive_params_df <- read_excel(protocol_path, 
-                                   sheet = grep(tolower("almost additive parameters"),sheets))
+  major_params_df <- read_excel(protocol_path, 
+                                   sheet = grep(tolower("major parameters"),sheets))
   candidate_params_df <- read_excel(protocol_path, 
                                     sheet = grep(tolower("candidate parameters"),sheets))
-  if (any(grepl(tolower("parameters to set"),sheets))) {
+  if (any(grepl(tolower("parameters to fix or calculate"),sheets))) {
     constraints_df <- read_excel(protocol_path, 
-                                 sheet = grep(tolower("parameters to set"),sheets))
+                                 sheet = grep(tolower("parameters to fix or calculate"),sheets))
   } else {
     constraints_df <- NULL
   }
   
   # Check default values and bounds
-  if (any(additive_params_df$`default value` < additive_params_df$`lower bound` | 
-          additive_params_df$`default value` > additive_params_df$`upper bound`)) { 
+  if (any(major_params_df$`default value` < major_params_df$`lower bound` | 
+          major_params_df$`default value` > major_params_df$`upper bound`)) { 
     stop(paste("Default value of parameter(s))",
-               paste(additive_params_df$`name of the parameter`[additive_params_df$`default value` < additive_params_df$`lower bound` | additive_params_df$`default value` > additive_params_df$`upper bound`], 
+               paste(major_params_df$`name of the parameter`[major_params_df$`default value` < major_params_df$`lower bound` | major_params_df$`default value` > major_params_df$`upper bound`], 
                      collapse = ","),
-               "out of bounds. Please check default values and bounds of additive parameters in file",protocol_path))
+               "out of bounds. Please check default values and bounds of major parameters in file",protocol_path))
   }
   if (any(candidate_params_df$`default value` < candidate_params_df$`lower bound` | 
           candidate_params_df$`default value` > candidate_params_df$`upper bound`)) { 
@@ -60,11 +60,11 @@ load_protocol <- function(protocol_path, transform_outputs, use_obs_synth=FALSE,
                      collapse = ","),
                "out of bounds. Please check default values and bounds of candidate parameters in file",protocol_path))
   }
-  if (any(additive_params_df$`lower bound` >= additive_params_df$`upper bound`)) { 
+  if (any(major_params_df$`lower bound` >= major_params_df$`upper bound`)) { 
     stop(paste("Bounds of parameter(s))",
-               paste(additive_params_df$`name of the parameter`[additive_params_df$`lower bound` >= additive_params_df$`upper bound`], 
+               paste(major_params_df$`name of the parameter`[major_params_df$`lower bound` >= major_params_df$`upper bound`], 
                      collapse = ","),
-               "are not well defined (lower bound >= upper bound. Please check bounds of additive parameters in file",protocol_path))
+               "are not well defined (lower bound >= upper bound. Please check bounds of major parameters in file",protocol_path))
   }
   if (any(candidate_params_df$`lower bound` >= candidate_params_df$`upper bound`)) { 
     stop(paste("Bounds of parameter(s))",
@@ -80,8 +80,8 @@ load_protocol <- function(protocol_path, transform_outputs, use_obs_synth=FALSE,
 
     # Building true_param_values 
     true_param_values <- c(
-      as.list(setNames(object = additive_params_df$`default value`,
-                       nm = additive_params_df$`name of the parameter`)),
+      as.list(setNames(object = major_params_df$`default value`,
+                       nm = major_params_df$`name of the parameter`)),
       as.list(setNames(object = candidate_params_df$`default value`,
                        nm = candidate_params_df$`name of the parameter`))
     )
@@ -91,11 +91,11 @@ load_protocol <- function(protocol_path, transform_outputs, use_obs_synth=FALSE,
                        nm = constraints_df$`name of the parameter`))
     )
   
-    additive_params_df$`default value` <- perturb_param(additive_params_df, beta)
+    major_params_df$`default value` <- perturb_param(major_params_df, beta)
       
     candidate_params_df$`default value` <- perturb_param(candidate_params_df, beta)
     
-    write.csv2(additive_params_df, 
+    write.csv2(major_params_df, 
                file=file.path(out_dir,paste0("synth_almost_additive_parameters",
                                              "_beta",beta,".csv")), 
                row.names = FALSE)
@@ -108,23 +108,23 @@ load_protocol <- function(protocol_path, transform_outputs, use_obs_synth=FALSE,
   }
   
   
-  param_info <- list(lb=setNames(object = c(additive_params_df$`lower bound`,
+  param_info <- list(lb=setNames(object = c(major_params_df$`lower bound`,
                                             candidate_params_df$`lower bound`),
-                                 nm = c(additive_params_df$`name of the parameter`,
+                                 nm = c(major_params_df$`name of the parameter`,
                                         candidate_params_df$`name of the parameter`)),
-                     ub=setNames(object = c(additive_params_df$`upper bound`, 
+                     ub=setNames(object = c(major_params_df$`upper bound`, 
                                             candidate_params_df$`upper bound`),
-                                 nm = c(additive_params_df$`name of the parameter`,
+                                 nm = c(major_params_df$`name of the parameter`,
                                         candidate_params_df$`name of the parameter`)),
-                     init_values=setNames(object = c(additive_params_df$`default value`, 
+                     init_values=setNames(object = c(major_params_df$`default value`, 
                                                      candidate_params_df$`default value`),
-                                          nm = c(additive_params_df$`name of the parameter`,
+                                          nm = c(major_params_df$`name of the parameter`,
                                                  candidate_params_df$`name of the parameter`)))
   
   # Building default_param_values 
   default_param_values <- c(
-    as.list(setNames(object = additive_params_df$`default value`,
-                     nm = additive_params_df$`name of the parameter`)),
+    as.list(setNames(object = major_params_df$`default value`,
+                     nm = major_params_df$`name of the parameter`)),
     as.list(setNames(object = candidate_params_df$`default value`,
                                   nm = candidate_params_df$`name of the parameter`))
   )
@@ -135,13 +135,13 @@ load_protocol <- function(protocol_path, transform_outputs, use_obs_synth=FALSE,
   )
   
   # Parameters per group of observed variables
-  param_group <- lapply(unique(additive_params_df$group),function(x) {
-    res <- list(obligatory=filter(additive_params_df, group==x)$`name of the parameter`,
+  param_group <- lapply(unique(major_params_df$group),function(x) {
+    res <- list(obligatory=filter(major_params_df, group==x)$`name of the parameter`,
                 candidates=filter(candidate_params_df, group==x)$`name of the parameter`)
     if (length(res$candidates)==0) 
       res$candidates <- NULL
     return(res)})
-  names(param_group) <- unique(additive_params_df$group)
+  names(param_group) <- unique(major_params_df$group)
   
   # Check protol content
   check_protocol_content(protocol_path, variables_df, varNames_corresp,
@@ -162,17 +162,17 @@ check_protocol_structure <- function(protocol_path) {
   # include the required sheets and columns
   
   sheets <- excel_sheets(protocol_path)
-  expected_sheets <- c("variables", "almost additive parameters", "candidate parameters", 
-                       "parameters to set", "situation names")
+  expected_sheets <- c("variables", "major parameters", "candidate parameters", 
+                       "parameters to fix or calculate", "situation names")
   if (!all(sapply(sheets, function(x) {tolower(x) %in% tolower(expected_sheets)})))
     stop(paste0("Sheet(s) \"",paste(setdiff(tolower(expected_sheets), tolower(sheets)),collapse = "\", \""),
                 "\" not found in ",protocol_path,"\nPlease add it (them)."))
   
   expected_cols_ls <- list(
     `variables`=c("Name of the observed or required variable", "Name of the simulated variable"),
-    `almost additive parameters`=c("name of the parameter", "group", "default value", "lower bound", "upper bound"),
+    `major parameters`=c("name of the parameter", "group", "default value", "lower bound", "upper bound"),
     `candidate parameters`=c("name of the parameter", "group", "default value", "lower bound", "upper bound"),
-    `parameters to set`=c("name of the parameter", "value or formula"),
+    `parameters to fix or calculate`=c("name of the parameter", "value or formula"),
     `situation names`=c("Number", "Situation Name")
   )
   invisible(
@@ -210,17 +210,17 @@ check_protocol_content <- function(protocol_path, variables_df, varNames_corresp
     stop(paste("The name of a simulated variable must be provided for observed variable Date_BBCH90 in sheet \"variables\" of file",
                protocol_path))
   
-  # Check that there is at least one "almost additive param" when there are candidates
+  # Check that there is at least one "major param" when there are candidates
   invisible(lapply(names(param_group), function(x) {
     if(is.null(param_group[[x]]$obligatory)) 
-      stop(paste("\"Almost additive parameters\" must be defined for group",x,"\n Please correct file",protocol_path))
+      stop(paste("\"major parameters\" must be defined for group",x,"\n Please correct file",protocol_path))
     }
   ))  
   
-  # Check that there is observations for the groups defined in the parameters (almost additive)
+  # Check that there is observations for the groups defined in the parameters (major)
   invisible(lapply(names(param_group), function(x) {
     if ( !(x %in% unique(obsVar_group[names(varNames_corresp)])) ) 
-      stop(paste("\"Almost additive parameters\" are defined for group",x,
+      stop(paste("\"major parameters\" are defined for group",x,
                  "but there is either no observed or simulated variables defined for this group in the \"variables\" sheet.\n Please correct file",protocol_path))
   }
   ))  
