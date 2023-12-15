@@ -123,6 +123,7 @@ generate_results_files <- function(param_group, model_options,
   names(stats_default)[1] <- "Name of the variable"
 
   ## Compute stats criteria for the transformed variable
+  transform_var_converted <- NULL
   if (!is.null(transform_var)) {
     transform_var_converted <- transform_var
     names(transform_var_converted) <- 
