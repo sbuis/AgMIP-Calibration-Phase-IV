@@ -20,12 +20,20 @@ install_load <- function() {
     install.packages("readxl")
     library("readxl")
   }
-  if(!require("CroptimizR")){
-    devtools::install_github("SticsRPacks/CroptimizR@AgMIP_phaseIV")
+  if(!require("CroptimizR")) {
+    devtools::install_github("SticsRPacks/CroptimizR@*release")
+    library("CroptimizR")
+  } else if (!is_version_ok("CroptimizR", "0.6.0")) {
+    detach("package:CroptimizR", unload = TRUE)
+    devtools::install_github("SticsRPacks/CroptimizR@*release")
     library("CroptimizR")
   }
-  if(!require("CroPlotR")){
-    devtools::install_github("SticsRPacks/CroPlotR@4018d25")
+  if(!require("CroPlotR")) {
+    devtools::install_github("SticsRPacks/CroPlotR@*release")
+    library("CroPlotR")
+  } else if (!is_version_ok("CroPlotR", "0.9.0")) {
+    detach("package:CroPlotR", unload = TRUE)
+    devtools::install_github("SticsRPacks/CroPlotR@*release")
     library("CroPlotR")
   }
   if(!require("rstudioapi")){
@@ -40,4 +48,13 @@ install_load <- function() {
   
   invisible(lapply(list.files(file.path(here(),"R"), full.names=TRUE), function(x) source(x)))
   
+}
+
+is_version_ok <- function(pkg_name, min_version) {
+  cur_version = packageVersion(pkg_name)
+  if(cur_version < min_version) {
+    return(FALSE)
+  } else {
+    return(TRUE)
+  }
 }
