@@ -39,7 +39,9 @@ model_name <- "my_model_name"
 ## Source the file including your model wrapper: 
 ## replace path_to_my_model_wrapper in the following line by the actual path to 
 ## the file including the code of your model wrapper  
+## Or load the package including your model wrapper
 source("path_to_my_model_wrapper")
+
 ## Give here the link to your model wrapper function: replace my_model_wrapper_function
 ## by the actual name of the function defining your model wrapper.
 model_wrapper <- my_model_wrapper_function
