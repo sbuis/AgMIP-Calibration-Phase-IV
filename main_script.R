@@ -15,6 +15,12 @@ install_load()
 #                    FALSE to run phaseIV exercise)
 debug <- TRUE
 
+# Checkpoint-restart mode (set to TRUE will save temporary results in Rdata files 
+# so that in case of crash the script can be re-run from the last successful step,
+# see Details in https://github.com/sbuis/AgMIP-Calibration-Phase-IV description)
+# However, this may result in large files (up to several hundreds MBytes) being stored.
+checkpoint_restart  <- FALSE
+
 # Define the test case ("French" or "Australian") and variety
 test_case <- "French"
 variety <- "Apache"  # "Apache" or "Bermude"
@@ -215,7 +221,9 @@ if (debug) {
 }
 
 # Save configuration
-save.image(file=file.path(out_dir,"config.Rdata"))
+if (checkpoint_restart) {
+  save.image(file=file.path(out_dir,"config.Rdata"))
+}
 
 
 # Initialize some local variables 
@@ -225,8 +233,16 @@ res_it1 <- list(); res_it1_tmp <- NULL; res_it2 <- NULL;
 weight_it2 <- NULL; 
 complem_info <- list(it1=list(), it2=list())
 
-if (file.exists(file.path(out_dir,"checkpoint.Rdata"))) load(file.path(out_dir,"checkpoint.Rdata"))
-
+if (file.exists(file.path(out_dir,"checkpoint.Rdata"))) {
+  load(file.path(out_dir,"checkpoint.Rdata"))
+  flag_checkpoint <- TRUE
+  if (file.exists(file.path(out_dir,"config.Rdata"))) {
+    load(file.path(out_dir,"config.Rdata"))
+  }
+  if (file.exists(file.path(out_dir,"complementary_info.Rdata"))) {
+    load(file.path(out_dir,paste0("complementary_info.Rdata")))
+  }
+}
 
 # Evaluate performances using default values of the parameters
 
@@ -329,15 +345,20 @@ while (igr < length(param_group)) {
                           file_name = paste0("scatterPlots_it1_",gr))
   res_it1[[gr]] <- res_it1_tmp
   
-  save(sim_default, res_it1_tmp, res_it1, igr, crt_forced_param_values, 
-       transform_var,  
-       file = file.path(out_dir,paste0("checkpoint_it1_gr",igr,".Rdata")))
+  if (checkpoint_restart) {
+    save(sim_default, res_it1_tmp, res_it1, igr, crt_forced_param_values, 
+         transform_var,  
+         file = file.path(out_dir,paste0("checkpoint_it1_gr",igr,".Rdata")))
+  }
   
   complem_info$it1[[gr]] <- list(forced_param_values=unlist(crt_forced_param_values),
                                  obsVar_used=crt_var_list,
                                  crt_obs_list=crt_obs_list)
-  save(complem_info, 
-       file = file.path(out_dir,paste0("complementary_info.Rdata")))
+
+  if (checkpoint_restart) {
+    save(complem_info, 
+         file = file.path(out_dir,paste0("complementary_info.Rdata")))
+  }
   
 }
 
@@ -364,9 +385,10 @@ sim_list_it1_converted <- convert_and_rename(sim_it1$sim_list, sitNames_corresp,
 p <- plot(sim_list_it1_converted, obs=obs_list, type="scatter")
 CroPlotR::save_plot_pdf(p, out_dir, file_name = "scatterPlots_it1")
 
-save(sim_default, res_it1, sim_it1, igr, crt_forced_param_values, 
-     file = file.path(out_dir,paste0("checkpoint_it1_final.Rdata")))
-
+if (checkpoint_restart) {
+  save(sim_default, res_it1, sim_it1, igr, crt_forced_param_values, 
+       file = file.path(out_dir,paste0("checkpoint_it1_final.Rdata")))
+}
 
 
 # Parameter Estimation, Second iteration
@@ -435,16 +457,19 @@ if (is.null(res_it2)) {
   p <- plot(sim_list_it2_converted, obs=obs_list, type="scatter")
   CroPlotR::save_plot_pdf(p, out_dir, file_name = "scatterPlots_it2")
   
-  
-  save(sim_default, res_it1, sim_it1, igr, res_it2, sim_it2, 
-       file = file.path(out_dir,paste0("checkpoint_it2.Rdata")))
+  if (checkpoint_restart) {
+    save(sim_default, res_it1, sim_it1, igr, res_it2, sim_it2, 
+         file = file.path(out_dir,paste0("checkpoint_it2.Rdata")))
+  }
   
   complem_info$it2 <- list(forced_param_values=unlist(final_forced_param_values),
                            obsVar_used=varNames_corresp[varNames_corresp %in% unlist(lapply(converted_obs_list,names))],
                            converted_obs_list=converted_obs_list,
                            weight=weight_it2, sim_it1=sim_it1)
-  save(complem_info, 
+  if (checkpoint_restart) {
+    save(complem_info, 
        file = file.path(out_dir,paste0("complementary_info.Rdata")))
+  }
   
 }
 
