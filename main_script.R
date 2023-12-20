@@ -254,6 +254,7 @@ sim_default <- run_wrapper(model_wrapper=model_wrapper,
                            situation=sitNames_corresp, var=reqVar_Wrapper, 
                            obs_list=converted_obs_list,
                            transform_sim=transform_sim, transform_var=NULL)
+check_run_wrapper(sim=sim_default, obs_list=converted_obs_list, protocol_path=xls_path)
 sim_list_default_converted <- convert_and_rename(sim_default$sim_list, sitNames_corresp, simVar_units, 
                                            varNames_corresp, obsVar_units)
 p <- plot(sim_list_default_converted, obs=obs_list, type="scatter")
