@@ -242,7 +242,7 @@ generate_results_files <- function(param_group, model_options,
                        descr_ref_date=descr_ref_date, flag_eos=flag_eos)
 
   # Same but using simulated date for maturity instead of observed date
-  if (!flag_eos) {
+  if (!flag_eos) { # if flag_eos==TRUE, these files are supposed to be the same as the ones generated above
     generate_cal_results(sim_default, obs_list, obsVar_units, obsVar_used, 
                          sitNames_corresp, template_path, out_dir, test_case, 
                          variety, varNames_corresp, resVar_names, "default_values_simulated_mat",
