@@ -142,7 +142,8 @@ load_protocol <- function(protocol_path, transform_outputs, use_obs_synth=FALSE,
       res$candidates <- NULL
     return(res)})
   names(param_group) <- unique(major_params_df$group)
-  
+  param_group <- param_group[intersect(unique(obsVar_group), names(param_group))]   # use ordering of the groups as defined in tab Variables
+    
   # Check protol content
   check_protocol_content(protocol_path, variables_df, varNames_corresp,
                          simVar_units, transform_outputs, param_group,
