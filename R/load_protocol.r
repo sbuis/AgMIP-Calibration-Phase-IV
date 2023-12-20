@@ -36,8 +36,27 @@ load_protocol <- function(protocol_path, transform_outputs, use_obs_synth=FALSE,
   # Building param_info 
   major_params_df <- read_excel(protocol_path, 
                                    sheet = grep(tolower("major parameters"),sheets))
+  if (!is.numeric(major_params_df$`default value`)) {
+    stop(paste("Default values of major parameters must be numeric. Please check file",protocol_path))
+  }
+  if (!is.numeric(major_params_df$`lower bound`)) {
+    stop(paste("Lower bounds of major parameters must be numeric. Please check file",protocol_path))
+  }
+  if (!is.numeric(major_params_df$`upper bound`)) {
+    stop(paste("Upper bounds of major parameters must be numeric. Please check file",protocol_path))
+  }
+  
   candidate_params_df <- read_excel(protocol_path, 
                                     sheet = grep(tolower("candidate parameters"),sheets))
+  if (!is.numeric(candidate_params_df$`default value`)) {
+    stop(paste("Default values of candidate parameters must be numeric. Please check file",protocol_path))
+  }
+  if (!is.numeric(candidate_params_df$`lower bound`)) {
+    stop(paste("Lower bounds of candidate parameters must be numeric. Please check file",protocol_path))
+  }
+  if (!is.numeric(candidate_params_df$`upper bound`)) {
+    stop(paste("Upper bounds of candidate parameters must be numeric. Please check file",protocol_path))
+  }
   if (any(grepl(tolower("parameters to fix or calculate"),sheets))) {
     constraints_df <- read_excel(protocol_path, 
                                  sheet = grep(tolower("parameters to fix or calculate"),sheets))
@@ -144,10 +163,10 @@ load_protocol <- function(protocol_path, transform_outputs, use_obs_synth=FALSE,
   names(param_group) <- unique(major_params_df$group)
   param_group <- param_group[intersect(unique(obsVar_group), names(param_group))]   # use ordering of the groups as defined in tab Variables
     
-  # Check protol content
+  # Check protocol content
   check_protocol_content(protocol_path, variables_df, varNames_corresp,
                          simVar_units, transform_outputs, param_group,
-                         obsVar_group)
+                         obsVar_group, sitNames_corresp)
   
   return(list(sitNames_corresp=sitNames_corresp, 
               varNames_corresp=varNames_corresp, 
@@ -165,7 +184,7 @@ check_protocol_structure <- function(protocol_path) {
   sheets <- excel_sheets(protocol_path)
   expected_sheets <- c("variables", "major parameters", "candidate parameters", 
                        "parameters to fix or calculate", "situation names")
-  if (!all(sapply(sheets, function(x) {tolower(x) %in% tolower(expected_sheets)})))
+  if (!all(sapply(expected_sheets, function(x) {tolower(x) %in% tolower(expected_sheets)})))
     stop(paste0("Sheet(s) \"",paste(setdiff(tolower(expected_sheets), tolower(sheets)),collapse = "\", \""),
                 "\" not found in ",protocol_path,"\nPlease add it (them)."))
   
@@ -198,9 +217,15 @@ check_col_names <- function(protocol_path, expected_cols, cols, sheet) {
 
 check_protocol_content <- function(protocol_path, variables_df, varNames_corresp,
                                    simVar_units, transform_outputs, param_group,
-                                   obsVar_group) {
+                                   obsVar_group, sitNames_corresp) {
   # Check the content of the protocol description as given in xls file `protocol_path`
 
+  # Check situation names were provided
+  if (any(is.na(sitNames_corresp))) {
+    stop(paste("Missing (one or several) situation name(s). Please check tab sheet \"Situation names\" in file",protocol_path,
+               "\nA situation name your model_wrapper is able to handle, i.e. is able to run the corresponding situation from its name, must be given for each situation number."))
+  }
+  
   # Check that there is a correspondence for Date_BBCH90 (mandatory since the simulated 
   # variables such as Yield must be provided at Date_BBCH90)
   if ( !("Date_BBCH90" %in% variables_df$`Name of the observed or required variable`) )
