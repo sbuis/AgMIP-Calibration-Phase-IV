@@ -1,5 +1,5 @@
 # AgMIP-Calibration-Phase-IV
-Scripts and functions to apply AgMIP Calibration phase IV protocol with CroptimizR and CroPlotR 
+Scripts and functions to apply AgMIP Calibration phase IV protocol with CroptimizR and CroPlotR. 
 
 This repository has been created to gather useful functions, scripts, examples and possibly data for participants of the AgMIP Calibration Phase IV protocol who will use the [CroptimizR](https://github.com/SticsRPacks/CroptimizR) and [CroPlotR](https://github.com/SticsRPacks/CroPlotR) R packages. 
 
@@ -8,7 +8,6 @@ This repository has been created to gather useful functions, scripts, examples a
 * AgMIP-Calibration-Phase-IV.Rproj, the R project. Open it in RStudio before working on your application.
 * main_script.R, a template to be filled for the application of the AgMIP calibration phase IV protocol on your own model and configuration. To use it you need a model wrapper for the CroptimizR package for your model (refer to the [Guidelines for implementing a crop model R wrapper for CroptimizR](https://sticsrpacks.github.io/CroptimizR/articles/Designing_a_model_wrapper.html)).
 * R folder: contains functions used in main_script.R
-* wrapper folder: contains wrappers developed for AgMIP Calibration phase IV protocol.
 
 ## What does it provide?
 
