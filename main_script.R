@@ -108,7 +108,7 @@ noise_sd <- 0 # sd of gaussian noise added to synthetic observations (in percent
 seed <- 1234 # seed for random number generation. Set it to a constant value for an exact replicate of the experiment. Change its value to change random number generation and thus synthetic observations and default parameters values.
 
 flag_eos <- TRUE # TRUE to compare simulated and observed final values of biomass and Yield on 31/12/harvestYear, 
-# FALSE to compare them at harvest date
+# FALSE to compare them at observed harvest date
 # Set TRUE to remove Minnipa observations from Australian dataset, FALSE otherwise
 data_without_Minnipa <- TRUE
 

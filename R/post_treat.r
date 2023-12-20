@@ -242,21 +242,24 @@ generate_results_files <- function(param_group, model_options,
                        descr_ref_date=descr_ref_date, flag_eos=flag_eos)
 
   # Same but using simulated date for maturity instead of observed date
-  generate_cal_results(sim_default, obs_list, obsVar_units, obsVar_used, 
-                       sitNames_corresp, template_path, out_dir, test_case, 
-                       variety, varNames_corresp, resVar_names, "default_values_simulated_mat",
-                       use_obs_synth=use_obs_synth, sim_true=sim_true, 
-                       descr_ref_date=descr_ref_date, flag_true_mat=FALSE, flag_eos=flag_eos)
-  generate_cal_results(sim_it1, obs_list, obsVar_units, obsVar_used, 
-                       sitNames_corresp, template_path, out_dir, test_case, 
-                       variety, varNames_corresp, resVar_names, paste0(file_type,"_it1_simulated_mat"),
-                       use_obs_synth=use_obs_synth, sim_true=sim_true, 
-                       descr_ref_date=descr_ref_date, flag_true_mat=FALSE, flag_eos=flag_eos)
-  generate_cal_results(sim_it2, obs_list, obsVar_units, obsVar_used, 
-                       sitNames_corresp, template_path, out_dir, test_case, 
-                       variety, varNames_corresp, resVar_names,  paste0(file_type,"_it2_simulated_mat"),
-                       use_obs_synth=use_obs_synth, sim_true=sim_true, 
-                       descr_ref_date=descr_ref_date, flag_true_mat=FALSE, flag_eos=flag_eos)
+  if (!flag_eos) {
+    generate_cal_results(sim_default, obs_list, obsVar_units, obsVar_used, 
+                         sitNames_corresp, template_path, out_dir, test_case, 
+                         variety, varNames_corresp, resVar_names, "default_values_simulated_mat",
+                         use_obs_synth=use_obs_synth, sim_true=sim_true, 
+                         descr_ref_date=descr_ref_date, flag_true_mat=FALSE, flag_eos=flag_eos)
+    generate_cal_results(sim_it1, obs_list, obsVar_units, obsVar_used, 
+                         sitNames_corresp, template_path, out_dir, test_case, 
+                         variety, varNames_corresp, resVar_names, paste0(file_type,"_it1_simulated_mat"),
+                         use_obs_synth=use_obs_synth, sim_true=sim_true, 
+                         descr_ref_date=descr_ref_date, flag_true_mat=FALSE, flag_eos=flag_eos)
+    generate_cal_results(sim_it2, obs_list, obsVar_units, obsVar_used, 
+                         sitNames_corresp, template_path, out_dir, test_case, 
+                         variety, varNames_corresp, resVar_names,  paste0(file_type,"_it2_simulated_mat"),
+                         use_obs_synth=use_obs_synth, sim_true=sim_true, 
+                         descr_ref_date=descr_ref_date, flag_true_mat=FALSE, flag_eos=flag_eos)
+  }
+
 }
 
 
