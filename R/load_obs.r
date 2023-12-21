@@ -1,10 +1,14 @@
 load_obs <- function(obs_data_path, obs_unit_path, varNames_corresp, 
-                     sitNames_corresp, simVar_units, obsVar_group) {
+                     sitNames_corresp, simVar_units, obsVar_group, 
+                     flag_eos) {
   
   obs_df <- read.table(file=obs_data_path, header = TRUE, stringsAsFactors = FALSE)
   obs_df <- select_if(obs_df, ~!all(is.na(.))) # remove columns with just NAs
   obs_units <- read.table(file=obs_unit_path, header = TRUE, stringsAsFactors = FALSE, 
                           sep=";", strip.white=TRUE)
+  
+  harvest_year <- setNames(obs_df$HarvestYear[!duplicated(obs_df$Number)], 
+                          obs_df$Number[!duplicated(obs_df$Number)])
   
   obsVar_names <- setdiff(names(obs_df),c("Number","Site","HarvestYear","SowingDate", "Variety","Date"))
   obsVar_units <- setNames(obs_units$Unit, nm = obs_units$Column.name)
@@ -26,9 +30,6 @@ load_obs <- function(obs_data_path, obs_unit_path, varNames_corresp,
   # TODO: Remove intersection with names(obsVar_group) if HarvestDate is removed to the observations.
   
   # Transform observed dates of phenological stages in julian days from 31/12/(sowing year-1)
-  ###################################################################################
-  ## WARNING: that should be adapted depending on the model (ref. could be different)
-  ###################################################################################
   var_date <- obsVar_used[grepl("Date",obsVar_used)]
   if ("Date_sowing" %in% names(obs_df)) {
     obs_df <- rename(obs_df, Date_sowing="SowingDate")
@@ -65,6 +66,18 @@ load_obs <- function(obs_data_path, obs_unit_path, varNames_corresp,
   obs_list <- split(obs_df, obs_df$Situation)
   obs_list <- lapply(obs_list, function(x) select(x,-Situation))
   
+  # In case flag_eos is activated, replace last observed date by 31/12/harvest_year 
+  if (flag_eos) { 
+    for (sit in names(obs_list)) {
+      eos_Date <- as.Date(paste0(harvest_year[[sit]],"-12-31"), format="%Y-%m-%d")[[1]]
+      # except for "Lake_2010_***" since there's not enough weather data ...
+      if (sit %in% names(sitNames_corresp[grep("Lake-2010",sitNames_corresp)])) {
+        eos_Date <- as.Date("2011-01-30", format="%Y-%m-%d")[[1]]
+      }
+      obs_list[[sit]][nrow(obs_list[[sit]]),"Date"] <- eos_Date
+    } 
+  }
+  
   # Convert obs_list to simulated names and units
   converted_obs_list <- obs_list
   if (!is.null(sitNames_corresp))
@@ -78,6 +91,7 @@ load_obs <- function(obs_data_path, obs_unit_path, varNames_corresp,
   
   return(list(obs_list=obs_list, converted_obs_list=converted_obs_list, 
               obsVar_names=obsVar_names, obsVar_units=obsVar_units, 
-              obsVar_used=obsVar_used, sowing_jul_obs=sowing_jul_obs))
+              obsVar_used=obsVar_used, sowing_jul_obs=sowing_jul_obs,
+              harvest_year=harvest_year))
 
 }
