@@ -386,23 +386,14 @@ generate_cal_results <- function(sim_final, obs_list, obsVar_units, obsVar_used,
   
   ## Convert julian days in Dates
   var_date <- names(res_df)[grepl("Date_",names(res_df))]   # TODO : change if HarvestDate is required ...
-  if ("Date_sowing" %in% names(res_df)) {
-    res_df <- res_df %>% 
-      mutate(year_sowing=year(as.Date(Date_sowing, format = "%d/%m/%Y")),
-             Origin=as.Date(paste0(year_sowing-1,"-12-31"))) %>% 
-      rowwise() %>% mutate(across(all_of(var_date), ~ case_when(.==0 ~ as.character(NA), 
-                                                                .!=0 ~ format(as.Date(.x, 
-                                                                                      origin=Origin),"%d/%m/%Y")))) %>%
-      select(-Origin, -year_sowing) %>% relocate(names(template_df))
-  } else {
-    res_df <- res_df %>% 
-      mutate(year_sowing=year(as.Date(SowingDate, format = "%d/%m/%Y")),
-             Origin=as.Date(paste0(year_sowing-1,"-12-31"))) %>% 
-      rowwise() %>% mutate(across(all_of(var_date), ~ case_when(.==0 ~ as.character(NA), 
-                                                                .!=0 ~ format(as.Date(.x, 
-                                                                                      origin=Origin),"%d/%m/%Y")))) %>%
-      select(-Origin, -year_sowing) %>% relocate(names(template_df))
-  }
+  res_df <- res_df %>% 
+    mutate(Origin=ref_date[as.character(res_df$Number)]) %>% 
+    rowwise() %>% mutate(across(all_of(var_date), ~ case_when(.==0 ~ as.character(NA), 
+                                                              .!=0 ~ format(as.Date(.x, 
+                                                                                    origin=Origin),"%d/%m/%Y")))) %>%
+    select(-Origin, -year_sowing) %>% relocate(names(template_df))
+  
+  
   
   suffix <- NULL
   if (test_case=="French") suffix <- paste0("_",variety) 

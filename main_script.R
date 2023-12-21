@@ -153,19 +153,22 @@ if (test_case=="Australian" & data_without_Minnipa) {
 }
 obs_data_path <- file.path(here(),obs_data_folder,paste0("cal_4_obs_",test_case,suffix,".txt"))
 obs_unit_path <- file.path(here(),obs_data_folder,paste0("cal_4_obs_",test_case,"_units.csv"))
+## Get the reference date for each situation
+template_path <- file.path(here(),"data",paste0("cal_4_results_",test_case,suffix,"_numerical_modelName_contact_person.txt"))
+ref_date <- get_reference_date(descr_ref_date, template_path)
+
 obs <- load_obs(obs_data_path, obs_unit_path, varNames_corresp,
-                sitNames_corresp, simVar_units, obsVar_group)
+                sitNames_corresp, simVar_units, obsVar_group, flag_eos, ref_date)
 
 obs_list <- obs$obs_list  # list of observation as defined in the observation file
 obsVar_names <- obs$obsVar_names # Names of the observed variables as defined in the observation file
 obsVar_units <- obs$obsVar_units # Units of the observed variables as defined in the observation file
 obsVar_used <- obs$obsVar_used # NAmes of the observed variables used in the current protocol application
 converted_obs_list <- obs$converted_obs_list # list of observation in th emodel space (i.e. with name of situation and variables as in the model_wrapper, and units as defined in model outputs)
-sowing_jul_obs <- obs$sowing_jul_obs
+harvest_year <- obs$harvest_year
 
 # Get the list of variables for which the user must provide 
 # results in the cal_4_results_***.txt file)
-template_path <- file.path(here(),"data",paste0("cal_4_results_",test_case,suffix,"_numerical_modelName_contact_person.txt"))
 template_df <- read.table(template_path,
                           header = TRUE, stringsAsFactors = FALSE)
 resVar_names <- setdiff(names(template_df),c("Number","Site","HarvestYear",
@@ -188,6 +191,7 @@ if (!all(names(varNames_corresp) %in% unique(c(obsVar_names, resVar_names))))
 #  transform_inputs - transform_outputs)
 reqVar_Wrapper <- setdiff(c(varNames_corresp,transform_inputs),transform_outputs)
 
+# Generate synthetic observations if required
 sim_true <- NULL				
 if (use_obs_synth) {
   
@@ -202,7 +206,7 @@ if (use_obs_synth) {
   converted_obs_list <- obs_synth$converted_obs_list
   sim_true <- obs_synth$sim_true								
   
-} 
+}
 
 
 # In debug mode reduce number of evaluations, situations, repetitions, candidate parameters, ...

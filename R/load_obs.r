@@ -1,6 +1,6 @@
 load_obs <- function(obs_data_path, obs_unit_path, varNames_corresp, 
                      sitNames_corresp, simVar_units, obsVar_group, 
-                     flag_eos) {
+                     flag_eos, ref_date) {
   
   obs_df <- read.table(file=obs_data_path, header = TRUE, stringsAsFactors = FALSE)
   obs_df <- select_if(obs_df, ~!all(is.na(.))) # remove columns with just NAs
@@ -29,15 +29,14 @@ load_obs <- function(obs_data_path, obs_unit_path, varNames_corresp,
                             names(obsVar_group))
   # TODO: Remove intersection with names(obsVar_group) if HarvestDate is removed to the observations.
   
-  # Transform observed dates of phenological stages in julian days from 31/12/(sowing year-1)
+  # Transform observed dates of phenological stages in julian days from the reference date given by the user
   var_date <- obsVar_used[grepl("Date",obsVar_used)]
   if ("Date_sowing" %in% names(obs_df)) {
     obs_df <- rename(obs_df, Date_sowing="SowingDate")
   }
   
   obs_df <- obs_df %>% 
-    mutate(year_sowing=year(as.Date(SowingDate, format = "%d/%m/%Y")),
-           Origin=as.Date(paste0(year_sowing-1,"-12-31"))) %>% 
+    mutate(Origin=ref_date[as.character(obs_df$Number)]) %>% 
     rowwise() %>% mutate(across(all_of(c("SowingDate",var_date)), 
                                 ~ julian(as.Date(.x, 
                                                  format = "%d/%m/%Y"),
