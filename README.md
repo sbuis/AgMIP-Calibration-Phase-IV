@@ -50,8 +50,8 @@ A set of files containing results is automatically generated (by default in fold
 If the code is run on synthetic experiments (see associated option at the beginning of main_script.R), the following additional files are generated:
 
 * **synth_almost_additive_parameters_beta.csv** and **synth_candidate_parameters_beta.csv**: description of the parameters used in the synthetic experiments (extraction of tabs provided in protocol_descr_\*\*\*.xlsx, BUT with perturbed values for the default values of the parameters)
-* **cal_4_results_Australian_true_values_ModelName.txt**:	the true values generated for both calibration and evaluation datasets for the variables required in the protocol
-* **cal_4_obs_Australian_true_values_ModelName.txt**  and **cal_4_obs_Australian_noisy_values_SDnoise_ModelName.txt**:	the true and noisy values generated for the observations used
+* **cal_4_results_test_case_true_values_ModelName.txt**:	the true values generated for both calibration and evaluation datasets for the variables required in the protocol
+* **cal_4_obs_test_case_true_values_ModelName.txt**  and **cal_4_obs_test_case_noisy_values_SDnoise_ModelName.txt**:	the true and noisy values generated for the observations used
 
 
 
