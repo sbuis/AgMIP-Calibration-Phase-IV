@@ -78,8 +78,8 @@ check_run_wrapper <- function(sim, obs_list, protocol_path) {
     is_present <- obs_list[[sit]]$Date %in% sim$sim_list[[sit]]$Date
     if (any(!is_present)) {
       stop(paste("Date(s)",paste(obs_list[[sit]]$Date[!is_present],collapse = ","),
-                 "not simulated by your model wrapper for situation",sit,"although it is mandatory.",
-                 "\nPlease check your model wrapper."))
+                 "not simulated by your model wrapper for situation",sit,"although there are observations for this date(s).",
+                 "\nPlease allow your model to return simulated results at least up to this date."))
     }
   }
   
