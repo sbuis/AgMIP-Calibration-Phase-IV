@@ -225,41 +225,45 @@ generate_results_files <- function(param_group, model_options,
   }
   
   # Generate cal_4_results_* files for each iteration plus default values
-  generate_cal_results(sim_default, obs_list, obsVar_units, obsVar_used, 
-                       sitNames_corresp, template_path, out_dir, test_case, 
-                       variety, varNames_corresp, resVar_names, "default_values",
-                       use_obs_synth=use_obs_synth, sim_true=sim_true, 
-                       descr_ref_date=descr_ref_date, flag_eos=flag_eos)
-  generate_cal_results(sim_it1, obs_list, obsVar_units, obsVar_used, 
-                       sitNames_corresp, template_path, out_dir, test_case, 
-                       variety, varNames_corresp, resVar_names, paste0(file_type,"_it1"),
-                       use_obs_synth=use_obs_synth, sim_true=sim_true, 
-                       descr_ref_date=descr_ref_date, flag_eos=flag_eos)
-  generate_cal_results(sim_it2, obs_list, obsVar_units, obsVar_used, 
-                       sitNames_corresp, template_path, out_dir, test_case, 
-                       variety, varNames_corresp, resVar_names,  paste0(file_type,"_it2"),
-                       use_obs_synth=use_obs_synth, sim_true=sim_true, 
-                       descr_ref_date=descr_ref_date, flag_eos=flag_eos)
-
-  # Same but using simulated date for maturity instead of observed date
-  if (!flag_eos) { # if flag_eos==TRUE, these files are supposed to be the same as the ones generated above
+  # Results at maturity are extracted at observed date, in case flag_eos not activated
+  if (!flag_eos) {
+    suffix <- "_obs_mat"
     generate_cal_results(sim_default, obs_list, obsVar_units, obsVar_used, 
                          sitNames_corresp, template_path, out_dir, test_case, 
-                         variety, varNames_corresp, resVar_names, "default_values_simulated_mat",
+                         variety, varNames_corresp, resVar_names, paste0("default_values",suffix),
                          use_obs_synth=use_obs_synth, sim_true=sim_true, 
-                         descr_ref_date=descr_ref_date, flag_true_mat=FALSE, flag_eos=flag_eos)
+                         descr_ref_date=descr_ref_date, flag_obs_mat=TRUE, flag_eos=flag_eos)
     generate_cal_results(sim_it1, obs_list, obsVar_units, obsVar_used, 
                          sitNames_corresp, template_path, out_dir, test_case, 
-                         variety, varNames_corresp, resVar_names, paste0(file_type,"_it1_simulated_mat"),
+                         variety, varNames_corresp, resVar_names, paste0(file_type,"_it1",suffix),
                          use_obs_synth=use_obs_synth, sim_true=sim_true, 
-                         descr_ref_date=descr_ref_date, flag_true_mat=FALSE, flag_eos=flag_eos)
+                         descr_ref_date=descr_ref_date, flag_obs_mat=TRUE, flag_eos=flag_eos)
     generate_cal_results(sim_it2, obs_list, obsVar_units, obsVar_used, 
                          sitNames_corresp, template_path, out_dir, test_case, 
-                         variety, varNames_corresp, resVar_names,  paste0(file_type,"_it2_simulated_mat"),
+                         variety, varNames_corresp, resVar_names,  paste0(file_type,"_it2",suffix),
                          use_obs_synth=use_obs_synth, sim_true=sim_true, 
-                         descr_ref_date=descr_ref_date, flag_true_mat=FALSE, flag_eos=flag_eos)
+                         descr_ref_date=descr_ref_date, flag_obs_mat=TRUE, flag_eos=flag_eos)
   }
 
+  # Same but results at maturity are extracted at simulated date (done in all cases)
+  suffix <- NULL
+  if (!flag_eos) suffix <- "_simulated_mat"
+  generate_cal_results(sim_default, obs_list, obsVar_units, obsVar_used, 
+                       sitNames_corresp, template_path, out_dir, test_case, 
+                       variety, varNames_corresp, resVar_names, paste0("default_values",suffix),
+                       use_obs_synth=use_obs_synth, sim_true=sim_true, 
+                       descr_ref_date=descr_ref_date, flag_obs_mat=FALSE, flag_eos=flag_eos)
+  generate_cal_results(sim_it1, obs_list, obsVar_units, obsVar_used, 
+                       sitNames_corresp, template_path, out_dir, test_case, 
+                       variety, varNames_corresp, resVar_names, paste0(file_type,"_it1",suffix),
+                       use_obs_synth=use_obs_synth, sim_true=sim_true, 
+                       descr_ref_date=descr_ref_date, flag_obs_mat=FALSE, flag_eos=flag_eos)
+  generate_cal_results(sim_it2, obs_list, obsVar_units, obsVar_used, 
+                       sitNames_corresp, template_path, out_dir, test_case, 
+                       variety, varNames_corresp, resVar_names,  paste0(file_type,"_it2",suffix),
+                       use_obs_synth=use_obs_synth, sim_true=sim_true, 
+                       descr_ref_date=descr_ref_date, flag_obs_mat=FALSE, flag_eos=flag_eos)
+  
 }
 
 
@@ -267,7 +271,7 @@ generate_cal_results <- function(sim_final, obs_list, obsVar_units, obsVar_used,
                                  sitNames_corresp, template_path, out_dir, test_case, 
                                  variety,varNames_corresp, resVar_names, file_type,
                                  use_obs_synth=FALSE, sim_true=NULL, descr_ref_date=NULL,
-                                 flag_true_mat=TRUE, flag_eos) {
+                                 flag_obs_mat=TRUE, flag_eos) {
   
   # Convert simulations to observation space (names of situations and variables, units) if necessary
   if (is.null(sim_final$sim_list_converted)) {
@@ -309,6 +313,10 @@ generate_cal_results <- function(sim_final, obs_list, obsVar_units, obsVar_used,
       mutate(Date=as.Date(Date, format = "%d/%m/%Y")) 
   } 
   
+  ## Retrieve harvest year
+  harvest_year <- setNames(template_df$HarvestYear[!duplicated(template_df$Number)], 
+                           template_df$Number[!duplicated(template_df$Number)])
+  
   ## Create a mask for extracting required values from simulations
   ## The mask is equal to observed list for the situations of the calibration dataset 
   ## + required variables at HARVEST for the situations of the evaluation dataset
@@ -325,40 +333,43 @@ generate_cal_results <- function(sim_final, obs_list, obsVar_units, obsVar_used,
   
   # Handle the retrieval of end-of-season results both for calibration and evaluation datasets 
   # depending on the options chosen.
-  if (use_obs_synth) { 
-    ref_date <- get_reference_date(descr_ref_date, template_path)
-    for (sit in names(mask)) {
-      if (flag_true_mat) {
-        if (flag_eos) { # eos_date is set to 31/12/harvestYear
-          harvestYear <- format(tail(sim_true$sim_list_converted[[sit]]$Date,n=1), format="%Y")
-          eos_Date <- as.Date(paste0(harvestYear,"-12-31"), format="%Y-%m-%d")[[1]]
-          # except for "Lake_2010_***" since there's not enough weather data ...
-          if (sit %in% names(sitNames_corresp[grep("Lake-2010",sitNames_corresp)])) {
-            eos_Date <- as.Date("2011-01-30", format="%Y-%m-%d")[[1]]
-          }
-        } else { # eos_date is set to TRUE value of maturity date
-          jul_BBCH90 <- tail(sim_true$sim_list_converted[[sit]]$Date_BBCH90,n=1)
-          eos_Date <- as.Date(as.numeric(jul_BBCH90),
-                              origin=ref_date[[sit]],
-                              format="%Y-%m-%d")[[1]]
-        }
-      } else {
-        jul_BBCH90 <- tail(sim_final$sim_list[[sitNames_corresp[[sit]]]][[varNames_corresp[["Date_BBCH90"]]]],n=1)
-        eos_Date <- as.Date(as.numeric(jul_BBCH90),
-                            origin=ref_date[[sit]],
-                            format="%Y-%m-%d")[[1]]
+  ref_date <- get_reference_date(descr_ref_date, template_path)
+  for (sit in names(mask)) {
+    if (flag_obs_mat) {
+      # eos_date is set to observed value of maturity date
+      # jul_BBCH90 <- tail(sim_true$sim_list_converted[[sit]]$Date_BBCH90,n=1)
+      jul_BBCH90 <- tail(obs_list[[sit]]$Date_BBCH90,n=1)
+      if (is.null(jul_BBCH90)) jul_BBCH90 <- NA
+    } else {
+      # eos_date is set to simulated value of maturity date
+      jul_BBCH90 <- tail(sim_final$sim_list[[sitNames_corresp[[sit]]]][[varNames_corresp[["Date_BBCH90"]]]],n=1)
+    }
+
+    if (is.na(jul_BBCH90)) { 
+      # set eos_date to 31/12/harvestYear
+      harvestYear <- harvest_year[[sit]]
+      eos_Date <- as.Date(paste0(harvestYear,"-12-31"), format="%Y-%m-%d")[[1]]
+      # except for "Lake_2010_***" since there's not enough weather data ...
+      if (sit %in% names(sitNames_corresp[grep("Lake-2010",sitNames_corresp)])) {
+        eos_Date <- as.Date("2011-01-30", format="%Y-%m-%d")[[1]]
       }
-      mask[[sit]][nrow(mask[[sit]]),"Date"] <- eos_Date
-      ## check that the maturity date is posterior to the last observation date ...
-      ## in this case warn the user and set harvest date later
-      if (nrow(mask[[sit]]) > 1) {
-        if (mask[[sit]][nrow(mask[[sit]]),"Date"] <= mask[[sit]][nrow(mask[[sit]])-1,"Date"]) {
-          mask[[sit]][nrow(mask[[sit]]),"Date"] <- mask[[sit]][nrow(mask[[sit]])-1,"Date"] + 5
-        }
+    } else {
+      eos_Date <- as.Date(as.numeric(jul_BBCH90),
+                          origin=ref_date[[sit]],
+                          format="%Y-%m-%d")[[1]]    
+    }    
+    
+    mask[[sit]][nrow(mask[[sit]]),"Date"] <- eos_Date
+    
+    ## check that the maturity date is posterior to the last observation date ...
+    ## in this case warn the user and set harvest date later
+    if (nrow(mask[[sit]]) > 1) {
+      if (mask[[sit]][nrow(mask[[sit]]),"Date"] <= mask[[sit]][nrow(mask[[sit]])-1,"Date"]) {
+        mask[[sit]][nrow(mask[[sit]]),"Date"] <- mask[[sit]][nrow(mask[[sit]])-1,"Date"] + 5
       }
     }
   }
-
+  
   ## Intersect mask and simulated values
   obs_sim_list <- CroptimizR:::make_obsSim_consistent(sim_final_converted$sim_list,  
                                                       mask)
