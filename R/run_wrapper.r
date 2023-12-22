@@ -66,8 +66,8 @@ check_run_wrapper <- function(sim, obs_list, protocol_path) {
   }
   
   for (sit in names(obs_list)) {
-    var_obs <- names(obs_list[sit])
-    var_sim <- names(sim$sim_list[sit])
+    var_obs <- names(obs_list[[sit]])
+    var_sim <- names(sim$sim_list[[sit]])
     is_present <- var_obs %in% var_sim
     if (any(!is_present)) {
       stop(paste("Variable(s)",paste(var_obs[!is_present],collapse = ","),
