@@ -6,6 +6,8 @@ if(!require("here")){
 source(file.path(here(),"R/install_load.r"))
 install_load()
 
+options(warn=1) 
+
 ################################################################################
 ###### Initialization step => to be adapted to your case #######################
 ###### please read the comments and give the required information
