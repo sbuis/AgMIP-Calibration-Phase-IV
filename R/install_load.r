@@ -23,7 +23,7 @@ install_load <- function() {
   if(!require("CroptimizR")) {
     devtools::install_github("SticsRPacks/CroptimizR@*release")
     library("CroptimizR")
-  } else if (!is_version_ok("CroptimizR", "0.6.0")) {
+  } else if (!is_version_ok("CroptimizR", "0.6.1")) {
     detach("package:CroptimizR", unload = TRUE)
     devtools::install_github("SticsRPacks/CroptimizR@*release")
     library("CroptimizR")
