@@ -20,19 +20,15 @@ main_script.R automatically applies and chains the different steps of the AgMIP 
 
 * If your model has already been interfaced with CroptimizR:
 
-  * download the repository (green button "Code" => "Download zip"), **in a path whose folder names do not contain any space**, and unzip it.
+  * Download the repository (green button "Code" => "Download zip"), **in a path whose folder names do not contain any space**, and unzip it.
   
-  * open the R project AgMIP-Calibration-Phase-IV in RStudio (using RStudio is mandatory for using the provided scripts)
+  * Open the R project AgMIP-Calibration-Phase-IV in RStudio (using RStudio is mandatory for using the provided scripts).
   
-  * fill the protocol_descr_****.xls files as indicated in the word document sent by the co-leaders.
+  * Adapt the beginning of main_script.R to your case.
   
-  * Check that your model wrapper is able to provide the simulated variables you listed in the protocol description files.
+  * In main_script.R, set debug variable to TRUE (see at the beginning of the script) and execute main_script.R in Rstudio => check if everything seems fine (e.g. no error + look at warning messages and results files - see next section for description ...)
   
-  * adapt the beginning of main_script.R to your case.
-  
-  * in main_script.R, set debug variable to TRUE (see at the beginning of the script) and execute main_script.R in Rstudio => check if everything seems fine (e.g. no error + look at warning messages and results files - see next section for description ...)
-  
-  * when everything seems to be OK, set debug variable to FALSE and execute main_script.R in Rstudio ... this may take several days depending on the computation time needed by your model. Solutions for improving performances exist if needed (e.g. run situations in parallel in your wrapper, refer to the [wrapper implementation guidelines](https://sticsrpacks.github.io/CroptimizR/articles/Designing_a_model_wrapper.html)).
+  * When everything seems to be OK, set debug variable to FALSE and execute main_script.R in Rstudio ... this may take several days depending on the computation time needed by your model. Solutions for improving performances exist if needed (e.g. run situations in parallel in your wrapper, refer to the [wrapper implementation guidelines](https://sticsrpacks.github.io/CroptimizR/articles/Designing_a_model_wrapper.html)).
  
 ## Results
 
