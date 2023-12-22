@@ -24,12 +24,25 @@ main_script.R automatically applies and chains the different steps of the AgMIP 
   
   * Open the R project AgMIP-Calibration-Phase-IV in RStudio (using RStudio is mandatory for using the provided scripts).
   
-  * Adapt the beginning of main_script.R to your case.
+  * Adapt the beginning of main_script.R to your case. Running this script requires (i) that you have created the input files needed to run your model on the given environments and (ii) that you have filled the protocol description EXCEL file.
   
   * In main_script.R, set debug variable to TRUE (see at the beginning of the script) and execute main_script.R in Rstudio => check if everything seems fine (e.g. no error + look at warning messages and results files - see next section for description ...)
   
   * When everything seems to be OK, set debug variable to FALSE and execute main_script.R in Rstudio ... this may take several days depending on the computation time needed by your model. Solutions for improving performances exist if needed (e.g. run situations in parallel in your wrapper, refer to the [wrapper implementation guidelines](https://sticsrpacks.github.io/CroptimizR/articles/Designing_a_model_wrapper.html)).
- 
+
+## Specific requirements for the models and associated wrappers
+
+* For this specific exercise, it is necessary for the model to provide simulated values ​​until the last day of the harvest year 
+(harvestYear/12/31). If this is not possible with your model, this can be handled in the model wrapper, replicating the simulated values ​​at maturity up to harvestYear/12/31.
+
+* In case some phenological stages used in the parameter estimation process are not reached, it is advised to set their simulated value to the last day of the harvest year.
+
+## In case of errors
+
+Please check warning and error messages and follow the given instructions.
+
+If you need assistance, please send an email to "samuel DOT buis AT inrae DOT fr" including the text of error and warning messages.
+
 ## Results
 
 A set of files containing results is automatically generated (by default in folder results/test_case/variety, where test_case=="French" or "Australian"):
