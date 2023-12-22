@@ -1,7 +1,7 @@
 # AgMIP-Calibration-Phase-IV
 Scripts and functions to apply [AgMIP Calibration phase IV protocol](https://www.biorxiv.org/content/10.1101/2023.10.26.564162v2.full.pdf) with CroptimizR and CroPlotR. 
 
-This repository has been created to gather useful functions, scripts, examples and possibly data for participants of the AgMIP Calibration Phase IV protocol who will use the [CroptimizR](https://github.com/SticsRPacks/CroptimizR) and [CroPlotR](https://github.com/SticsRPacks/CroPlotR) R packages. 
+This repository has been created to gather useful functions, scripts, examples and data for participants of the AgMIP Calibration Phase IV protocol who will use the software solution based on the [CroptimizR](https://github.com/SticsRPacks/CroptimizR) and [CroPlotR](https://github.com/SticsRPacks/CroPlotR) R packages. 
 
 ## What does it contain?
 
