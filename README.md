@@ -28,14 +28,13 @@ main_script.R automatically applies and chains the different steps of the AgMIP 
   
   * In main_script.R, set debug variable to TRUE (see at the beginning of the script) and execute main_script.R in Rstudio => check if everything seems fine (e.g. no error + look at warning messages and results files - see next section for description ...)
   
-  * When everything seems to be OK, set debug variable to FALSE and execute main_script.R in Rstudio ... this may take several days depending on the computation time needed by your model. Solutions for improving performances exist if needed (e.g. run situations in parallel in your wrapper, refer to the [wrapper implementation guidelines](https://sticsrpacks.github.io/CroptimizR/articles/Designing_a_model_wrapper.html)).
+  * If everything seems to be OK, set debug variable to FALSE and execute main_script.R in Rstudio ... this may take several days depending on the computation time needed by your model. Solutions for improving performances exist if needed (e.g. run situations in parallel in your wrapper, refer to the [wrapper implementation guidelines](https://sticsrpacks.github.io/CroptimizR/articles/Designing_a_model_wrapper.html)). If there are errors, see following section "In case of errors".
 
 ## Specific requirements for the models and associated wrappers
 
-* For this specific exercise, it is necessary for the model to provide simulated values ​​until the last day of the harvest year 
-(harvestYear/12/31). If this is not possible with your model, this can be handled in the model wrapper, replicating the simulated values ​​at maturity up to harvestYear/12/31.
+* For this specific exercise, it is necessary for the model to provide simulated values until the last day of the harvest year (harvestYear/12/31). If this is not possible with your model, this can be handled in the model wrapper, replicating the simulated values at maturity up to harvestYear/12/31.
 
-* In case some phenological stages used in the parameter estimation process are not reached, it is advised to set their simulated value to the last day of the harvest year.
+* In case some phenological stages used in the parameter estimation process (i.e. included as variables in the phenology variable group) are not reached before the end simulated day, it is also strongly advised to set their simulated value to the last day of the harvest year, within the model wrapper.
 
 ## In case of errors
 
