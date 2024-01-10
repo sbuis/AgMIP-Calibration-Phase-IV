@@ -263,6 +263,7 @@ sim_default <- run_wrapper(model_wrapper=model_wrapper,
 check_run_wrapper(sim=sim_default, obs_list=converted_obs_list, protocol_path=xls_path)
 sim_list_default_converted <- convert_and_rename(sim_default$sim_list, sitNames_corresp, simVar_units, 
                                            varNames_corresp, obsVar_units)
+sim_default$sim_list_converted <- sim_list_default_converted
 p <- plot(sim_list_default_converted, obs=obs_list, type="scatter")
 CroPlotR::save_plot_pdf(p, out_dir, file_name = "scatterPlots_default")
 # Parameter Estimation, first iteration
@@ -391,6 +392,7 @@ sim_it1 <- run_wrapper(model_wrapper = model_wrapper,
 # ScatterPlots simulations VS obs after it1
 sim_list_it1_converted <- convert_and_rename(sim_it1$sim_list, sitNames_corresp, simVar_units, 
                                              varNames_corresp, obsVar_units)
+sim_it1$sim_list_converted <- sim_list_it1_converted
 p <- plot(sim_list_it1_converted, obs=obs_list, type="scatter")
 CroPlotR::save_plot_pdf(p, out_dir, file_name = "scatterPlots_it1")
 
@@ -463,6 +465,7 @@ if (is.null(res_it2)) {
   # ScatterPlots simulations VS obs after it2
   sim_list_it2_converted <- convert_and_rename(sim_it2$sim_list, sitNames_corresp, simVar_units, 
                                                varNames_corresp, obsVar_units)
+  sim_it2$sim_list_converted <- sim_list_it2_converted
   p <- plot(sim_list_it2_converted, obs=obs_list, type="scatter")
   CroPlotR::save_plot_pdf(p, out_dir, file_name = "scatterPlots_it2")
   

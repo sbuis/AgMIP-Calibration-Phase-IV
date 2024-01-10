@@ -223,8 +223,12 @@ generate_results_files <- function(param_group, model_options,
     #             row.names = FALSE, quote=FALSE)
     
   }
+
+    
+  # Generate cal_4_results_* files 
+  # ------------------------------
   
-  # Generate cal_4_results_* files for each iteration plus default values
+  # for each iteration plus default values
   # Results at maturity are extracted at observed date or 31/12/HarvestYear
   # in case flag_eos is activated
   suffix <- NULL
@@ -266,6 +270,39 @@ generate_results_files <- function(param_group, model_options,
                          descr_ref_date=descr_ref_date, flag_obs_mat=FALSE, flag_eos=flag_eos)
   }
 
+
+  # Generate daily output files
+  # ---------------------------
+  
+  daily_outdir <- file.path(out_dir,"DailyOutputs")
+  if (!dir.exists(daily_outdir)) dir.create(daily_outdir)
+  
+  # default
+  daily_outdir_default <- file.path(daily_outdir,"Default")
+  if (!dir.exists(daily_outdir_default)) dir.create(daily_outdir_default)
+  for (sit in names(sim_default$sim_list_converted)) {
+    write.table(sim_default$sim_list_converted[[sit]],
+                file = file.path(daily_outdir_default, paste0("sit",sit,".txt")), quote=FALSE)
+  }  
+  
+  # it1
+  daily_outdir_it1 <- file.path(daily_outdir,"Iteration1")
+  if (!dir.exists(daily_outdir_it1)) dir.create(daily_outdir_it1)
+  for (sit in names(sim_it1$sim_list_converted)) {
+    write.table(sim_it1$sim_list_converted[[sit]],
+                file = file.path(daily_outdir_it1, paste0("sit",sit,".txt")), quote=FALSE)
+  }
+  
+  # it2
+  daily_outdir_it2 <- file.path(daily_outdir,"Iteration2")
+  if (!dir.exists(daily_outdir_it2)) dir.create(daily_outdir_it2)
+  for (sit in names(sim_it2$sim_list_converted)) {
+    write.table(sim_it2$sim_list_converted[[sit]],
+                file = file.path(daily_outdir_it2, paste0("sit",sit,".txt")), quote=FALSE)
+  }
+  
+  
+  
 }
 
 
