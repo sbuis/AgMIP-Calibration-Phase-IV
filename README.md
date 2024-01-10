@@ -20,6 +20,8 @@ main_script.R automatically applies and chains the different steps of the AgMIP 
 
 * If you have an R wrapper of your model for CroptimizR:
 
+  * Check that it takes into account the particular requirements listed in the following section. If not, update it.
+
   * Download the repository (green button "Code" => "Download zip"), **in a path whose folder names do not contain any space**, and unzip it.
   
   * Open the R project AgMIP-Calibration-Phase-IV in RStudio (using RStudio is mandatory for using the provided scripts).
