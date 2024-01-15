@@ -16,11 +16,11 @@ main_script.R automatically applies and chains the different steps of the AgMIP 
 
 ## How to proceed?
 
-* If to your knowledge there is no wrapper for your model for CroptimizR yet, please send an email to "samuel DOT buis AT inrae DOT fr" precising that you are interested in using CroptimizR for the AgMIP phase IV exercise and giving the name and version of your model (maybe some colleagues have already developped a wrapper or would like to, I can update you). Guidelines for implementing a crop model R wrapper for CroptimizR can be found [here](https://sticsrpacks.github.io/CroptimizR/articles/Designing_a_model_wrapper.html)). Once it is developed, please test your wrapper using the test_wrapper function, as explained in the guidelines.
+* If to your knowledge there is no wrapper for your model for CroptimizR yet, please send an email to "samuel DOT buis AT inrae DOT fr" precising that you are interested in using CroptimizR for the AgMIP phase IV exercise and giving the name and version of your model (maybe some colleagues have already developped a wrapper or would like to, I can update you). Guidelines for implementing a crop model R wrapper for CroptimizR can be found [here](https://sticsrpacks.github.io/CroptimizR/articles/Designing_a_model_wrapper.html)), and **it is also important to take into account the particular requirements listed in the following section**. Once it is developed, please test your wrapper using the test_wrapper function, as explained in the guidelines.
 
 * If you have an R wrapper of your model for CroptimizR:
 
-  * Check that it takes into account the particular requirements listed in the following section. If not, update it.
+  * **Check that your model wrapper takes into account the particular requirements listed in the following section**. If not, update it.
 
   * Download the repository (green button "Code" => "Download zip"), **in a path whose folder names do not contain any space**, and unzip it.
   
