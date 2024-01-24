@@ -45,6 +45,14 @@ load_protocol <- function(protocol_path, transform_outputs, use_obs_synth=FALSE,
   if (!is.numeric(major_params_df$`upper bound`)) {
     stop(paste("Upper bounds of major parameters must be numeric. Please check file",protocol_path))
   }
+  # Check variable groups
+  if (!all(major_params_df$group %in% obsVar_group)) {
+    stop(paste("Group(s)",paste(major_params_df$group[!(major_params_df$group %in% obsVar_group)],
+                                collapse = ","),
+               "defined in \"major parameters\" sheet of the protocol description file, are not included in the list of groups defined in the \"variables\" sheet.",
+               "\nPlease check column \"group\" of \"major parameters\" sheet in file",protocol_path))
+  }
+  
   
   candidate_params_df <- read_excel(protocol_path, 
                                     sheet = grep(tolower("candidate parameters"),sheets))
@@ -63,6 +71,14 @@ load_protocol <- function(protocol_path, transform_outputs, use_obs_synth=FALSE,
   } else {
     constraints_df <- NULL
   }
+  # Check variable groups
+  if (!all(candidate_params_df$group %in% obsVar_group)) {
+    stop(paste("Group(s)",paste(candidate_params_df$group[!(candidate_params_df$group %in% obsVar_group)],
+                                collapse = ","),
+               "defined in \"candidate parameters\" sheet of the protocol description file, are not included in the list of groups defined in the \"variables\" sheet.",
+               "\nPlease check column \"group\" of \"candidate parameters\" sheet in file",protocol_path))
+  }
+  
   
   # Check default values and bounds
   if (any(major_params_df$`default value` < major_params_df$`lower bound` | 
