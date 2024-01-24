@@ -1,3 +1,25 @@
+################################################################################
+#
+# Main script to apply AgMIP Calibration phase IV protocol using CroptimizR and 
+# CroPlotR R packages in the context of the AgMIP Phase IV exercise.
+#
+# This script has been specifically implemented for the AgMIP Phase IV exercise
+# conducted in early 2024.
+#
+# Full integration of the corresponding protocol into the CroptimizR package will 
+# be carried out in future versions of the package.
+# 
+# If you use this script (and more generally the packages CroptimizR and CroPlotR),
+# please cite the references given by executing the following lines:
+#  citation("CroptimizR")
+#  citation("CroPlotR")
+#
+# Please refer to the "Initialization step" section in the following lines of 
+# this script to adapt it to your own case.
+#
+# Author: Samuel Buis
+################################################################################
+
 # Install and load the needed libraries
 if(!require("here")){
   install.packages("here")
