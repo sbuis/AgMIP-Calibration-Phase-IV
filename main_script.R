@@ -47,7 +47,7 @@ checkpoint_restart  <- FALSE
 
 # Define the test case ("French" or "Australian") and variety
 test_case <- "French"
-variety <- "Apache"  # "Apache" or "Bermude"
+variety <- "A"  # "A" or "B"
 # test_case <- "Australian"
 # variety <- "Janz"
 
