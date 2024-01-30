@@ -282,7 +282,8 @@ generate_results_files <- function(param_group, model_options,
   if (!dir.exists(daily_outdir_default)) dir.create(daily_outdir_default)
   for (sit in names(sim_default$sim_list_converted)) {
     write.table(sim_default$sim_list_converted[[sit]],
-                file = file.path(daily_outdir_default, paste0("sit",sit,".txt")), quote=FALSE)
+                file = file.path(daily_outdir_default, paste0("sit",sit,".txt")), 
+                quote=FALSE, row.names = FALSE)
   }  
   
   # it1
@@ -290,7 +291,8 @@ generate_results_files <- function(param_group, model_options,
   if (!dir.exists(daily_outdir_it1)) dir.create(daily_outdir_it1)
   for (sit in names(sim_it1$sim_list_converted)) {
     write.table(sim_it1$sim_list_converted[[sit]],
-                file = file.path(daily_outdir_it1, paste0("sit",sit,".txt")), quote=FALSE)
+                file = file.path(daily_outdir_it1, paste0("sit",sit,".txt")), 
+                quote=FALSE, row.names = FALSE)
   }
   
   # it2
@@ -298,7 +300,8 @@ generate_results_files <- function(param_group, model_options,
   if (!dir.exists(daily_outdir_it2)) dir.create(daily_outdir_it2)
   for (sit in names(sim_it2$sim_list_converted)) {
     write.table(sim_it2$sim_list_converted[[sit]],
-                file = file.path(daily_outdir_it2, paste0("sit",sit,".txt")), quote=FALSE)
+                file = file.path(daily_outdir_it2, paste0("sit",sit,".txt")), 
+                quote=FALSE, row.names = FALSE)
   }
   
   
