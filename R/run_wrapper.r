@@ -56,13 +56,15 @@ apply_transform_var <- function(sim_list, transform_var) {
   
 }
 
-check_run_wrapper <- function(sim, obs_list, protocol_path) {
+check_run_wrapper <- function(sim, obs_list, protocol_path, out_dir) {
   
   is_present <- names(obs_list) %in% names(sim$sim_list)
   if (any(!is_present)) {
+    save(sim, obs_list, file = file.path(out_dir, "debug.Rdata"))
     stop(paste("Situation(s)",paste(names(obs_list)[!is_present],collapse = ","),
                "not simulated by your model wrapper although it is mandatory.",
-               "\nPlease check your model wrapper and protocol description file."))
+               "\nPlease check your model wrapper and protocol description file.",
+               "\nModel wrapper results have been saved in file",file.path(out_dir, "debug.Rdata")))
   }
   
   for (sit in names(obs_list)) {
@@ -70,16 +72,20 @@ check_run_wrapper <- function(sim, obs_list, protocol_path) {
     var_sim <- names(sim$sim_list[[sit]])
     is_present <- var_obs %in% var_sim
     if (any(!is_present)) {
+      save(sim, obs_list, file = file.path(out_dir, "debug.Rdata"))
       stop(paste("Variable(s)",paste(var_obs[!is_present],collapse = ","),
                  "not simulated by your model wrapper for situation",sit,"although defined in the protocol description file",protocol_path,
-                 "\nPlease check your model wrapper and protocol description file."))
+                 "\nPlease check your model wrapper and protocol description file.",
+                 "\nModel wrapper results have been saved in file",file.path(out_dir, "debug.Rdata")))
     }
     
     is_present <- obs_list[[sit]]$Date %in% sim$sim_list[[sit]]$Date
     if (any(!is_present)) {
+      save(sim, obs_list, file = file.path(out_dir, "debug.Rdata"))
       stop(paste("Date(s)",paste(obs_list[[sit]]$Date[!is_present],collapse = ","),
                  "not simulated by your model wrapper for situation",sit,"although there are observations for this date(s).",
-                 "\nPlease allow your model to return simulated results at least up to this date."))
+                 "\nPlease allow your model to return simulated results at least up to this date.",
+                 "\nModel wrapper results have been saved in file",file.path(out_dir, "debug.Rdata")))
     }
   }
   
