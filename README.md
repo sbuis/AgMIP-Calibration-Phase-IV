@@ -28,9 +28,9 @@ main_script.R automatically applies and chains the different steps of the AgMIP 
   
   * Adapt the beginning of main_script.R to your case. Running this script requires (i) that you have created the input files needed to run your model on the given environments and (ii) that you have filled the protocol description EXCEL file.
   
-  * In main_script.R, set debug variable to TRUE (see at the beginning of the script) and execute main_script.R in Rstudio => check if everything seems fine (e.g. no error + look at warning messages and results files - see next section for description ...)
+  * In main_script.R, set `debug` variable to TRUE (see at the beginning of the script) and execute main_script.R in Rstudio => check if everything seems fine (e.g. no error + look at warning messages and results files - see next section for description ...). In case of error, or if you have any doubt, please send an email to "samuel DOT buis AT inrae DOT fr".
   
-  * If everything seems to be OK, set debug variable to FALSE and execute main_script.R in Rstudio ... this may take several days depending on the computation time needed by your model. Solutions for improving performances exist if needed (e.g. run situations in parallel in your wrapper, refer to the [wrapper implementation guidelines](https://sticsrpacks.github.io/CroptimizR/articles/Designing_a_model_wrapper.html)). If there are errors, see following section "In case of errors".
+  * If everything seems to be OK, set  `debug` variable to FALSE and execute main_script.R in Rstudio ... this may take several days depending on the computation time needed by your model. Solutions for improving performances exist if needed (e.g. run situations in parallel in your wrapper, refer to the [wrapper implementation guidelines](https://sticsrpacks.github.io/CroptimizR/articles/Designing_a_model_wrapper.html)). If there are errors, see following section "In case of errors".
 
 ## Specific requirements for the models and associated wrappers
 
