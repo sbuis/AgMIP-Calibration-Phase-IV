@@ -44,6 +44,9 @@ debug <- TRUE
 # see Details in https://github.com/sbuis/AgMIP-Calibration-Phase-IV description)
 # However, this may result in large files (up to several hundreds MBytes) being stored.
 checkpoint_restart  <- FALSE
+if (debug) {
+  checkpoint_restart <- TRUE
+}			
 
 # Define the test case ("French" or "Australian") and variety
 test_case <- "French"
@@ -274,6 +277,16 @@ if (file.exists(file.path(out_dir,"checkpoint.Rdata"))) {
   }
 }
 
+# Initialize tranqsformation function
+transform_var <- NULL
+transform_var_converted <- NULL
+if ("Biomass" %in% names(varNames_corresp)) {
+  transform_var <- eval(parse(text=paste0("c(",varNames_corresp[["Biomass"]],
+                                          "=function(x) log(x+.Machine$double.xmin))")))
+  transform_var_converted <- transform_var
+  names(transform_var_converted) <- 
+    names(varNames_corresp)[match(names(transform_var),varNames_corresp)]
+}
 # Evaluate performances using default values of the parameters
 
 sim_default <- run_wrapper(model_wrapper=model_wrapper,
@@ -282,22 +295,18 @@ sim_default <- run_wrapper(model_wrapper=model_wrapper,
                            situation=sitNames_corresp, var=reqVar_Wrapper, 
                            obs_list=converted_obs_list,
                            transform_sim=transform_sim, transform_var=NULL)
-check_run_wrapper(sim=sim_default, obs_list=converted_obs_list, protocol_path=xls_path)
+check_run_wrapper(sim=sim_default, obs_list=converted_obs_list, protocol_path=xls_path,
+                  out_dir)						  
 sim_list_default_converted <- convert_and_rename(sim_default$sim_list, sitNames_corresp, simVar_units, 
                                            varNames_corresp, obsVar_units)
 sim_default$sim_list_converted <- sim_list_default_converted
 p <- plot(sim_list_default_converted, obs=obs_list, type="scatter")
-CroPlotR::save_plot_pdf(p, out_dir, file_name = "scatterPlots_default")
-# Parameter Estimation, first iteration
+CroPlotR::save_plot_pdf(p, out_dir, file_name = "scatterplots_default")
 
-cat("\n----- Parameter estimation Iteration 1\n")
+
+# Parameter Estimation, Step 6
+cat("\n----- Parameter estimation Step 6\n")
 cat("--------------------------------------\n")
-
-transform_var <- NULL
-if ("Biomass" %in% names(varNames_corresp)) {
-transform_var <- eval(parse(text=paste0("c(",varNames_corresp[["Biomass"]],
-                                        "=function(x) log(x+.Machine$double.xmin))")))
-} 
 
 crt_forced_param_values <- forced_param_values
 while (igr < length(param_group)) {
@@ -336,7 +345,7 @@ while (igr < length(param_group)) {
   }
   optim_options=list(nb_rep=nb_rep_it1, maxeval=maxeval, ranseed=seed, xtol_rel=1e-4, 
                      ftol_rel=1e-4, 
-                     out_dir=file.path(out_dir,"Iteration1",paste0("group_",gr)))
+                     out_dir=file.path(out_dir,"step6",paste0("group_",gr)))
   
   crit_function <- function(sim_list, obs_list) {
     crit <- crit_ols(sim_list, obs_list)
@@ -368,13 +377,19 @@ while (igr < length(param_group)) {
                              situation=sitNames_corresp, var=reqVar_Wrapper, 
                              obs_list=crt_obs_list,
                              transform_sim=transform_sim, transform_var=NULL)
-  
+  generate_all_cal_results(sim_it1_tmp, obs_list, obsVar_units, obsVar_used, 
+                           sitNames_corresp, template_path, out_dir, 
+                           varNames_corresp, resVar_names, 
+                           paste0("simulations_after","_",gr),
+                           use_obs_synth=use_obs_synth, sim_true=sim_true, 
+                           descr_ref_date=descr_ref_date, flag_obs_mat=TRUE, flag_eos=flag_eos)
+						   
   # ScatterPlots simulations VS obs at this step
   sim_list_it1_tmp_converted <- convert_and_rename(sim_it1_tmp$sim_list, sitNames_corresp, simVar_units, 
                                                    varNames_corresp, obsVar_units)
   p <- plot(sim_list_it1_tmp_converted, obs=obs_list, type="scatter")
-  CroPlotR::save_plot_pdf(p, optim_options$out_dir, 
-                          file_name = paste0("scatterPlots_it1_",gr))
+  CroPlotR::save_plot_pdf(p, out_dir, 
+                          file_name = paste0("scatterplots_after_",gr))
   res_it1[[gr]] <- res_it1_tmp
   
   if (checkpoint_restart) {
@@ -394,7 +409,7 @@ while (igr < length(param_group)) {
   
 }
 
-# List of parameters selected after iteration 1, estimated values and forced parameters
+# List of parameters selected after step 6, estimated values and forced parameters
 final_params <- unlist(lapply(names(param_group), function(x) names(res_it1[[x]]$final_values)))
 res_it1$final_values <- setNames(object=unlist(lapply(names(param_group), 
                                                       function(x) res_it1[[x]]$final_values)),
@@ -402,7 +417,7 @@ res_it1$final_values <- setNames(object=unlist(lapply(names(param_group),
 last_forced_param_values <- res_it1[[names(param_group)[length(param_group)]]]$forced_param_values
 res_it1$forced_param_values <- last_forced_param_values[setdiff(names(last_forced_param_values),
                                                                 final_params)]
-# Run model wrapper using parameter values estimated in iteration 1
+# Run model wrapper using parameter values estimated in step 6
 sim_it1 <- run_wrapper(model_wrapper = model_wrapper,
                        model_options=model_options,
                        param_values=c(res_it1$final_values, 
@@ -416,7 +431,7 @@ sim_list_it1_converted <- convert_and_rename(sim_it1$sim_list, sitNames_corresp,
                                              varNames_corresp, obsVar_units)
 sim_it1$sim_list_converted <- sim_list_it1_converted
 p <- plot(sim_list_it1_converted, obs=obs_list, type="scatter")
-CroPlotR::save_plot_pdf(p, out_dir, file_name = "scatterPlots_it1")
+CroPlotR::save_plot_pdf(p, out_dir, file_name = "scatterplots_after_step6")
 
 if (checkpoint_restart) {
   save(sim_default, res_it1, sim_it1, igr, crt_forced_param_values, 
@@ -424,10 +439,10 @@ if (checkpoint_restart) {
 }
 
 
-# Parameter Estimation, Second iteration
+# Parameter Estimation, Step 7
 
-cat("\n----- Parameter estimation Iteration 2\n")
-cat("--------------------------------------\n")
+cat("\n----- Parameter estimation step 7\n")
+cat("---------------------------------\n")
 
 nb_rep_it2 <- 20
 maxeval <- 50000
@@ -437,11 +452,11 @@ if (debug) {
 }
 optim_options=list(nb_rep=nb_rep_it2, maxeval=maxeval, ranseed=seed, xtol_rel=1e-4, ftol_rel=1e-4)
 
-# List of parameters to estimate as selected in iteration 1
+# List of parameters to estimate as selected in step 6
 final_params <- names(res_it1$final_values)
 final_param_info <- lapply(param_info,function(x) x[final_params])
 
-# Use estimated values of iteration 1 as initial values for 1st repetition
+# Use estimated values of step 6 as initial values for 1st repetition
 final_param_info$init_values <- res_it1$final_values
 
 ## Define parameters to force (defaults values for all non-selected parameters)
@@ -450,7 +465,7 @@ final_forced_param_values <- forced_param_values[setdiff(names(forced_param_valu
 
 if (is.null(res_it2)) {
  
-  optim_options$out_dir <- file.path(out_dir,"Iteration2")
+  optim_options$out_dir <- file.path(out_dir,"step 7")
 
   # Define the weight to use in the criterion to minimize
   ## apply transformation to sim_it1 first
@@ -476,7 +491,7 @@ if (is.null(res_it2)) {
                          transform_sim=transform_sim, var=reqVar_Wrapper,
                          weight=weight)												 
 
-  # Run model wrapper using parameter values estimated in iteration 2
+  # Run model wrapper using parameter values estimated in step 7
   sim_it2 <- run_wrapper(model_wrapper = model_wrapper,
                          model_options=model_options,
                          param_values=c(res_it2$final_values, res_it2$forced_param_values),
@@ -489,7 +504,7 @@ if (is.null(res_it2)) {
                                                varNames_corresp, obsVar_units)
   sim_it2$sim_list_converted <- sim_list_it2_converted
   p <- plot(sim_list_it2_converted, obs=obs_list, type="scatter")
-  CroPlotR::save_plot_pdf(p, out_dir, file_name = "scatterPlots_it2")
+  CroPlotR::save_plot_pdf(p, out_dir, file_name = "scatterplots_after_step7")
   
   if (checkpoint_restart) {
     save(sim_default, res_it1, sim_it1, igr, res_it2, sim_it2, 
@@ -511,19 +526,18 @@ if (is.null(res_it2)) {
 
 # Generating diagnostics and results files using CroPlotR
 
-suffix <- NULL
-if (test_case=="French") suffix <- paste0("_",variety) 
 generate_results_files(param_group, model_options,  
                        complem_info, res_it2, 
                        sitNames_corresp, 
                        sim_default, sim_it1, sim_it2, 
                        obs_list, converted_obs_list,
                        obsVar_units, obsVar_used, 
-                       template_path, out_dir, test_case, variety,
+                       template_path, out_dir,
                        varNames_corresp, resVar_names, 
                        forced_param_values, use_obs_synth=use_obs_synth, 
                        sim_true=sim_true, 
-                       descr_ref_date=descr_ref_date, flag_eos=flag_eos)
+                       descr_ref_date=descr_ref_date, flag_eos=flag_eos,
+                       transform_var_converted)
 # Copying script and protocol files in result folder
 file.copy(from=xls_path, to=out_dir, overwrite = TRUE)
 file.copy(from=rstudioapi::getSourceEditorContext()$path, to=out_dir, overwrite = TRUE)
@@ -539,8 +553,8 @@ cat(paste("\nResults Tables and files required in Phase IV protocol as well as d
 
 # Displaying Total time
 cat("\nTotal time of parameter estimation process:\n")
-cat(paste("    Iteration 1:", sum(sapply(names(param_group), function(gr) res_it1[[gr]]$total_time))/3600, "hours elapsed\n"))
-cat(paste("    Iteration 2:", res_it2$total_time/3600, "hours elapsed\n"))
+cat(paste("    Step 6:", sum(sapply(names(param_group), function(gr) res_it1[[gr]]$total_time))/3600, "hours elapsed\n"))
+cat(paste("    Step 7:", res_it2$total_time/3600, "hours elapsed\n"))
 cat(paste("    Total:", 
           (sum(sapply(names(param_group), function(gr) res_it1[[gr]]$total_time)) + 
              res_it2$total_time)/3600, 

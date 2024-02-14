@@ -56,7 +56,6 @@ generate_obs_synth <- function(true_param_values, model_wrapper, model_options, 
   })
   names(obs_list_synth_true) <- names(res$sim_list)
   obs_list_synth_true <- set_units(obs_list_synth_true, obsVar_units)
-  # Remove cropr attribute ?
   
   # Check that the number of synthetic observations is the same as the one of the 
   # real observations
@@ -67,8 +66,9 @@ generate_obs_synth <- function(true_param_values, model_wrapper, model_options, 
   if (!identical(obs_synth_nb[,obsVar_used],obs_real_nb[obsVar_used])) {
     print(obs_synth_nb[,obsVar_used])
     print(obs_real_nb[obsVar_used])
-	save(obs_list_synth_true, obs_list, obs_synth_df, obs_df, file=file.path(out_dir, "debug_obs_synth.Rdata"))
-    stop("Error generating synthetic observations: number of observations are different between synthetic and real observations.")
+    save(obs_list_synth_true, obs_list, obs_synth_df, obs_df, file=file.path(out_dir, "debug_obs_synth.Rdata"))
+    stop("Error generating synthetic observations: number of observations are different between synthetic and real observations.",
+    "\nSynthetic and real observations have been saved in file",file.path(out_dir, "debug_obs_synth.Rdata"))
   }
             
   # Add (truncated) gaussian noise
@@ -112,16 +112,16 @@ generate_obs_synth <- function(true_param_values, model_wrapper, model_options, 
   # Store True simulated values in cal_4_results_*** and obs format  
   generate_cal_results(sim_true, obs_list, obsVar_units, obsVar_used, 
                        sitNames_corresp, template_path, 
-                       out_dir, test_case, 
-                       variety, varNames_corresp, resVar_names, 
-                       file_type="true_values", use_obs_synth=TRUE, sim_true=sim_true, 
+                       out_dir, 
+                       varNames_corresp, resVar_names, 
+                       file_type="simulations_true_values", use_obs_synth=TRUE, sim_true=sim_true, 
                        descr_ref_date=descr_ref_date, flag_eos=flag_eos)
   generate_obs_file(obs_list_synth_true, obsVar_units, obsVar_used, 
-                    sitNames_corresp, obs_data_path, out_dir, test_case, 
-                    variety, varNames_corresp, resVar_names, file_type="true_values")
+                    sitNames_corresp, obs_data_path, out_dir, 
+                    varNames_corresp, resVar_names, file_type="true_values")
   generate_obs_file(obs_list_synth, obsVar_units, obsVar_used, 
-                    sitNames_corresp, obs_data_path, out_dir, test_case, 
-                    variety, varNames_corresp, resVar_names, file_type=paste0("noisy_values_SDnoise",noise_sd))
+                    sitNames_corresp, obs_data_path, out_dir, 
+                    varNames_corresp, resVar_names, file_type=paste0("noisy_values_SDnoise",noise_sd))
   
   # Check that the difference between synthetic observations and simulations is NULL
   # Extract simulated values corresponding to observation sites/dates
@@ -132,7 +132,9 @@ generate_obs_synth <- function(true_param_values, model_wrapper, model_options, 
                                         obs_list = tmp$obs_list)
   diff <- crit_ols(res$sim_list, res$obs_list)
   if (diff > 1e-20) {
-    stop(paste("Error generating synthetic observations: difference between observations and simulations is not null in the simulation space: diff=",diff))
+    save(sim_true, converted_obs_list_true, res, diff, file=file.path(out_dir, "debug_obs_synth.Rdata"))
+    stop(paste("Error generating synthetic observations: difference between observations and simulations is not null in the simulation space: diff=",diff,
+         "\nSimulations and observations have been saved in file",file.path(out_dir, "debug_obs_synth.Rdata")))
   }
   ## In the simulation
   tmp <- CroptimizR:::make_obsSim_consistent(sim_true$sim_list_converted,  
@@ -141,7 +143,9 @@ generate_obs_synth <- function(true_param_values, model_wrapper, model_options, 
                                         obs_list = tmp$obs_list)
   diff <- crit_ols(res$sim_list, res$obs_list)
   if (diff > 1e-20) {
-    stop(paste("Error generating synthetic observations: difference between observations and simulations is not null in the observation space: diff=",diff))
+    save(sim_true, obs_list_synth_true, res, diff, file=file.path(out_dir, "debug_obs_synth.Rdata"))
+    stop(paste("Error generating synthetic observations: difference between observations and simulations is not null in the observation space: diff=",diff,
+               "\nSimulations and observations have been saved in file",file.path(out_dir, "debug_obs_synth.Rdata")))
   }
   
   return(list(obs_list=obs_list_synth, converted_obs_list=converted_obs_list, sim_true=sim_true))

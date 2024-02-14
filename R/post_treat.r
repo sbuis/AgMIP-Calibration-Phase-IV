@@ -4,43 +4,44 @@ generate_results_files <- function(param_group, model_options,
                                    sim_default, sim_it1, sim_it2, 
                                    obs_list, converted_obs_list,
                                    obsVar_units, obsVar_used, 
-                                   template_path, out_dir, test_case, variety,
+                                   template_path, out_dir,
                                    varNames_corresp, resVar_names, 
-                                   forced_param_values, file_type="numerical",
+                                   forced_param_values, 
                                    use_obs_synth=FALSE, sim_true=NULL, 
-                                   descr_ref_date=NULL, flag_eos=FALSE) {
+                                   descr_ref_date=NULL, flag_eos=FALSE,
+                                   transform_var_converted) {
 
-  # Tables of parameters for each iteration
-  # ---------------------------------------
+  # Table of parameters
+  # -------------------
   
   group_names <- setNames(
     unlist(lapply(strsplit(names(unlist(param_group)), split="[.]"),function(x) x[1])),
     nm=unlist(param_group))
 
-  ## Iteration 1
-  Table <- NULL        
+  ## Step 6
+  table_step6 <- NULL        
   for (gr in names(param_group)) {
-    load(file.path(out_dir,"Iteration1",paste0("group_",gr),"optim_results.Rdata"))
-    Table_gr <- generate_parameters_table(res, group_names, forced_param_values)
-    Table <- bind_rows(Table, Table_gr)
+    load(file.path(out_dir,"step6",paste0("group_",gr),"optim_results.Rdata"))
+    table_gr <- generate_parameters_table(res, group_names, forced_param_values, step="6")
+    table_step6 <- dplyr::bind_rows(table_step6, table_gr)
   }
-  save_table(table=Table, table_name="Table_parameters_Iteration1", path=out_dir)
 
-  ## Iteration 2
-  load(file.path(out_dir,"Iteration2","optim_results.Rdata"))
-  Table <- generate_parameters_table(res, group_names, forced_param_values)
-  save_table(table=Table, 
-             table_name="Table_parameters_Iteration2", 
+  ## Step 7
+  load(file.path(out_dir,"step7","optim_results.Rdata"))
+  table_step7 <- generate_parameters_table(res, group_names, forced_param_values, step="7")
+  table <- dplyr::full_join(table_step6,table_step7, by=c("Group","Parameter","Default value"))
+  save_table(table=table, 
+             table_name="parameters", 
              path=out_dir)
 
 
-  # Tables of steps for each iteration
-  # ----------------------------------
+  # Summary of each step
+  # --------------------
   
-  ## Iteration 1
+  ## Step 6
   
-  ### List the results files for each group and step
-  dirs <- list.dirs(file.path(out_dir,"Iteration1"))
+  ### List the results files for each group and internal step
+  dirs <- list.dirs(file.path(out_dir,"step6"))
   files <- list.files(path=dirs, pattern="optim_results.Rdata", full.names = TRUE)          
   files <- lapply(group_names, function(x) {
     if (length(grep(x,files))>1) {
@@ -66,27 +67,28 @@ generate_results_files <- function(param_group, model_options,
                nrow(res$params_and_crit),
                NA,
                ""),
-        nm=c("Name of the group","Name of the estimated parameters",
+        nm=c("Group","Estimated parameters",
              "Number of starting values",
              "Initial value of the minimized criterion",
              "Final value of the minimized criterion",
              "Final AICc", "Total number of calls to model",
              "Simulation time (h)",
-             "Selected step")
+             "Selected set of parameters")
       )
     })
     Table_gr <- bind_rows(Table_gr)
-    Table_gr[Table_gr[,"Final AICc"]==min(Table_gr[,"Final AICc"]),"Selected step"] <- "X"
-    load(file.path(out_dir,"Iteration1",paste0("group_",gr),"optim_results.Rdata"))
+    Table_gr[Table_gr[,"Final AICc"]==min(Table_gr[,"Final AICc"]),"Selected set of parameters"] <- "X"
+    load(file.path(out_dir,"step6",paste0("group_",gr),"optim_results.Rdata"))
     Table_gr[nrow(Table_gr),"Simulation time (h)"] <- res$total_time/3600
     Table <- bind_rows(Table, Table_gr)
       
   }
-  save_table(table=Table, table_name="Table_steps_Iteration1", path=out_dir)
+  save_table(table=Table, table_name="summary_step6", path=out_dir)
   
   
-  ## Iteration 2
-  load(file.path(out_dir,"Iteration2","optim_results.Rdata"))
+  ## Step 7
+  
+  load(file.path(out_dir,"step7","optim_results.Rdata"))
   estimated_parameters <- names(res$final_values)
   Table <- setNames(
     tibble(list(names(res$final_values)),
@@ -95,7 +97,7 @@ generate_results_files <- function(param_group, model_options,
            res$min_crit_value,
            nrow(res$params_and_crit),
            res$total_time/3600),
-    nm=c("Name of the estimated parameters",
+    nm=c("Estimated parameters",
          "Number of starting values",
          "Initial value of the minimized criterion",
          "Final value of the minimized criterion",
@@ -103,124 +105,53 @@ generate_results_files <- function(param_group, model_options,
          "Simulation time (h)")
   )
   save_table(table=Table, 
-             table_name="Table_steps_Iteration2", 
+             table_name="summary_step7", 
              path=out_dir)
   
 
 
-  # Tables of stats per variable for each iteration
-  # -----------------------------------------------
-  
-  ## Compute stats for the simulation results obtained from default values of the parameters
-  crit_names <- c("SS_res","Bias","RMSE","EF","Bias2","SDSD","LCS")
-  sim_list_converted_default <- convert_and_rename(sim_default$sim_list, 
-                                                   sitNames_corresp, simVar_units, 
-                                                   varNames_corresp, obsVar_units)
-  stats_default <- summary(sim_list_converted_default, obs=obs_list, stats=crit_names) %>%
-    dplyr::select(-group, -situation) %>%
-    dplyr::rename(SSE=SS_res, Efficiency=EF) %>%
-    dplyr::rename_with(~paste("Default",.x))
-  names(stats_default)[1] <- "Name of the variable"
-
-  ## Compute stats criteria for the transformed variable
-  transform_var_converted <- NULL
-  if (!is.null(transform_var)) {
-    transform_var_converted <- transform_var
-    names(transform_var_converted) <- 
-      names(varNames_corresp)[match(names(transform_var),varNames_corresp)]
-    obs_list_transformed <- apply_transform_var(obs_list, transform_var_converted)
-    sim_list_default_transformed <- apply_transform_var(sim_list_converted_default, transform_var_converted)
-    stats_transformed <- summary(sim_list_default_transformed, obs=obs_list_transformed, stats=crit_names) %>%
-      dplyr::select(-group, -situation) %>%
-      dplyr::rename(SSE=SS_res, Efficiency=EF) %>%
-      dplyr::filter(variable %in% names(transform_var_converted)) %>%
-      dplyr::rename_with(~paste("Default",.x))
-    names(stats_transformed)[1] <- "Name of the variable"
-    stats_transformed$`Name of the variable` <- 
-      paste0("log(",stats_transformed$`Name of the variable`,")")
-    stats_default <- dplyr::union(stats_default, stats_transformed)
-  }
-  
-  for (it in c("1", "2")) {
- 
-    if (it=="3") {
-      sim <- sim_final
-    } else {
-      eval(parse(text=paste0("sim <- sim_it",it)))
-    }
-    sim_list_converted <- convert_and_rename(sim$sim_list, sitNames_corresp, simVar_units, 
-                                   varNames_corresp, obsVar_units)
+  # Tables of stats (per stat criterion)
+  # ------------------------------------
+  stats_list <- list()
+  crit_names <- c("RMSE","rRMSE","EF","Bias2","SDSD","LCS")
+  for (sim in list(sim_default$sim_list,sim_it1$sim_list, sim_it2$sim_list) ) {
     
-    # Compute stats criteria
+    ## Compute stats for the simulation results obtained from default values of the parameters
+    sim_list_converted <- convert_and_rename(sim, 
+                                             sitNames_corresp, simVar_units, 
+                                             varNames_corresp, obsVar_units)
     stats <- summary(sim_list_converted, obs=obs_list, stats=crit_names) %>%
-      dplyr::select(-group, -situation) %>%
-      dplyr::rename(SSE=SS_res, Efficiency=EF) %>%
-      dplyr::rename_with(~paste("Final",.x))
-    names(stats)[1] <- "Name of the variable"
-
-    # Compute stats criteria for the transformed variable
-    if (!is.null(transform_var)) {
-      sim_list_transformed <- apply_transform_var(sim_list_converted, transform_var_converted)
-      stats_transformed <- summary(sim_list_transformed, obs=obs_list_transformed, stats=crit_names) %>%
+      dplyr::select(-group, -situation)
+    
+    ## Compute stats criteria for the transformed variable
+    if (!is.null(transform_var_converted)) {
+      obs_list_transformed <- apply_transform_var(obs_list, transform_var_converted)
+      sim_list_default_transformed <- apply_transform_var(sim_list_converted, transform_var_converted)
+      stats_transformed <- summary(sim_list_default_transformed, obs=obs_list_transformed, stats=crit_names) %>%
         dplyr::select(-group, -situation) %>%
-        dplyr::rename(SSE=SS_res, Efficiency=EF) %>%
-        dplyr::filter(variable %in% names(transform_var_converted)) %>%
-        dplyr::rename_with(~paste("Final",.x))
-      names(stats_transformed)[1] <- "Name of the variable"
-      stats_transformed$`Name of the variable` <- 
-        paste0("log(",stats_transformed$`Name of the variable`,")")
+        dplyr::filter(variable %in% names(transform_var_converted))
+      stats_transformed$`variable` <- 
+        paste0("log(",stats_transformed$`variable`,")")
       stats <- dplyr::union(stats, stats_transformed)
     }
-
-    # Compute weighted SSE per variable for iteration 2
-    if (it != "1") {
-      eval(parse(text=paste0("model_error_sd <- complem_info$it",it,"$weight")))
-      simVar_units_square <- paste(simVar_units,simVar_units)
-      names(simVar_units_square) <- names(simVar_units)
-      model_error_sd <- bind_cols(lapply(names(model_error_sd), 
-                                         function(x) { units(model_error_sd[[x]]) <- simVar_units[x]; model_error_sd[x]}))
-      names(model_error_sd) <- names(varNames_corresp)[match(names(model_error_sd),varNames_corresp)]
-      model_error_sd_converted <- 
-        bind_cols(lapply(names(model_error_sd), function(x) {
-          # only convert weights of non-transformed variables (weight of log-transformed variables is the same whatever the dimension)
-          if ( !(x %in% names(transform_var_converted)) ) {   
-            units(model_error_sd[[x]]) <- obsVar_units[x]; model_error_sd[x]
-          }
-          model_error_sd[x]
-        }))
-      names(model_error_sd_converted)[match(names(transform_var_converted),names(model_error_sd_converted))] <- 
-        paste0("log(",names(transform_var_converted),")")
-      model_error_sd_converted[setdiff(stats[["Name of the variable"]], names(model_error_sd_converted))] <- NA
-      stats <- mutate(stats, 
-                      `Default Weighted SSE`=as.numeric(stats_default[["Default SSE"]] / (model_error_sd_converted[stats[["Name of the variable"]]])^2 ),
-                      `Final Weighted SSE`=as.numeric(stats[["Final SSE"]] / (model_error_sd_converted[stats[["Name of the variable"]]])^2 ))
-      ordered_columns <- c("Name of the variable", "Unit", "Default SSE", "Final SSE",
-                           "Default Weighted SSE", "Final Weighted SSE", "Default Bias",
-                           "Final Bias",	"Default RMSE",	"Final RMSE",	"Default Efficiency",
-                           "Final Efficiency", "Default Bias2", "Final Bias2", 
-                           "Default SDSD", "Final SDSD", "Default LCS", "Final LCS")
-    } else {
-      ordered_columns <- c("Name of the variable", "Unit", "Default SSE", "Final SSE",
-                           "Default Bias",
-                           "Final Bias",	"Default RMSE",	"Final RMSE",	"Default Efficiency",
-                           "Final Efficiency", "Default Bias2", "Final Bias2", 
-                           "Default SDSD", "Final SDSD", "Default LCS", "Final LCS")
-    }
     
-    # Add unit column
-    stats$Unit <- obsVar_units[stats[["Name of the variable"]]]
-    # Rename columns
-    # Intercalate Default and final values
-    #### Join the Table and relocate columns
-    stats_all <- dplyr::full_join(stats, stats_default, by="Name of the variable") %>% 
-      dplyr::relocate(dplyr::all_of(ordered_columns))
- 
-    save_table(table=stats_all, table_name=paste0("Table_variables_Iteration",it), 
+    stats_list <- c(stats_list,list(stats))
+  }
+  
+  for (crit in crit_names) {
+    table <- dplyr::full_join(stats_list[[1]][,c("variable",crit)],
+                              stats_list[[2]][,c("variable",crit)], 
+                              by="variable") %>% 
+      dplyr::full_join(stats_list[[3]][,c("variable",crit)], 
+                       by="variable") %>%
+      dplyr::mutate(Unit = obsVar_units[variable]) %>%
+      relocate(Unit, .after = variable)
+    names(table) <- c("Variable","Unit",
+                      paste("Default",crit),
+                      paste(crit,"after step6"),
+                      paste(crit,"after step7"))
+    save_table(table=table, table_name=paste0("variables_",crit), 
                path=out_dir)
-    
-    # write.table(stats_all, 
-    #             file = file.path(out_dir,paste0("Table_variables_Iteration",it,".txt")),
-    #             row.names = FALSE, quote=FALSE)
     
   }
 
@@ -229,47 +160,22 @@ generate_results_files <- function(param_group, model_options,
   # ------------------------------
   
   # for each iteration plus default values
-  # Results at maturity are extracted at observed date or 31/12/HarvestYear
-  # in case flag_eos is activated
-  suffix <- NULL
-  if (!flag_eos) suffix <- "_obs_mat"
-  generate_cal_results(sim_default, obs_list, obsVar_units, obsVar_used, 
-                       sitNames_corresp, template_path, out_dir, test_case, 
-                       variety, varNames_corresp, resVar_names, paste0("default_values",suffix),
+  generate_all_cal_results(sim_default, obs_list, obsVar_units, obsVar_used, 
+                       sitNames_corresp, template_path, out_dir, 
+                       varNames_corresp, resVar_names, "simulations_default",
                        use_obs_synth=use_obs_synth, sim_true=sim_true, 
                        descr_ref_date=descr_ref_date, flag_obs_mat=TRUE, flag_eos=flag_eos)
-  generate_cal_results(sim_it1, obs_list, obsVar_units, obsVar_used, 
-                       sitNames_corresp, template_path, out_dir, test_case, 
-                       variety, varNames_corresp, resVar_names, paste0(file_type,"_it1",suffix),
+  generate_all_cal_results(sim_it1, obs_list, obsVar_units, obsVar_used, 
+                       sitNames_corresp, template_path, out_dir, 
+                       varNames_corresp, resVar_names, "simulations_after_step6",
                        use_obs_synth=use_obs_synth, sim_true=sim_true, 
                        descr_ref_date=descr_ref_date, flag_obs_mat=TRUE, flag_eos=flag_eos)
-  generate_cal_results(sim_it2, obs_list, obsVar_units, obsVar_used, 
-                       sitNames_corresp, template_path, out_dir, test_case, 
-                       variety, varNames_corresp, resVar_names,  paste0(file_type,"_it2",suffix),
+  generate_all_cal_results(sim_it2, obs_list, obsVar_units, obsVar_used, 
+                       sitNames_corresp, template_path, out_dir, 
+                       varNames_corresp, resVar_names,  "simulations_after_step7",
                        use_obs_synth=use_obs_synth, sim_true=sim_true, 
                        descr_ref_date=descr_ref_date, flag_obs_mat=TRUE, flag_eos=flag_eos)
   
-
-  # Same but results at maturity are extracted at simulated date (in case flag_eos not activated, as complementary results)
-  if (!flag_eos) {
-    suffix <- "_simulated_mat"
-    generate_cal_results(sim_default, obs_list, obsVar_units, obsVar_used, 
-                         sitNames_corresp, template_path, out_dir, test_case, 
-                         variety, varNames_corresp, resVar_names, paste0("default_values",suffix),
-                         use_obs_synth=use_obs_synth, sim_true=sim_true, 
-                         descr_ref_date=descr_ref_date, flag_obs_mat=FALSE, flag_eos=flag_eos)
-    generate_cal_results(sim_it1, obs_list, obsVar_units, obsVar_used, 
-                         sitNames_corresp, template_path, out_dir, test_case, 
-                         variety, varNames_corresp, resVar_names, paste0(file_type,"_it1",suffix),
-                         use_obs_synth=use_obs_synth, sim_true=sim_true, 
-                         descr_ref_date=descr_ref_date, flag_obs_mat=FALSE, flag_eos=flag_eos)
-    generate_cal_results(sim_it2, obs_list, obsVar_units, obsVar_used, 
-                         sitNames_corresp, template_path, out_dir, test_case, 
-                         variety, varNames_corresp, resVar_names,  paste0(file_type,"_it2",suffix),
-                         use_obs_synth=use_obs_synth, sim_true=sim_true, 
-                         descr_ref_date=descr_ref_date, flag_obs_mat=FALSE, flag_eos=flag_eos)
-  }
-
 
   # Generate daily output files
   # ---------------------------
@@ -287,7 +193,7 @@ generate_results_files <- function(param_group, model_options,
   }  
   
   # it1
-  daily_outdir_it1 <- file.path(daily_outdir,"Iteration1")
+  daily_outdir_it1 <- file.path(daily_outdir,"step6")
   if (!dir.exists(daily_outdir_it1)) dir.create(daily_outdir_it1)
   for (sit in names(sim_it1$sim_list_converted)) {
     write.table(sim_it1$sim_list_converted[[sit]],
@@ -296,7 +202,7 @@ generate_results_files <- function(param_group, model_options,
   }
   
   # it2
-  daily_outdir_it2 <- file.path(daily_outdir,"Iteration2")
+  daily_outdir_it2 <- file.path(daily_outdir,"step7")
   if (!dir.exists(daily_outdir_it2)) dir.create(daily_outdir_it2)
   for (sit in names(sim_it2$sim_list_converted)) {
     write.table(sim_it2$sim_list_converted[[sit]],
@@ -308,10 +214,39 @@ generate_results_files <- function(param_group, model_options,
   
 }
 
+generate_all_cal_results <- function(sim_final, obs_list, obsVar_units, obsVar_used, 
+                                 sitNames_corresp, template_path, out_dir, 
+                                 varNames_corresp, resVar_names, file_type,
+                                 use_obs_synth=FALSE, sim_true=NULL, descr_ref_date=NULL,
+                                 flag_obs_mat=TRUE, flag_eos) {
+# Generates Txt files with simulation results
+  
+  
+  # Results at maturity are extracted at observed date or 31/12/HarvestYear
+  # in case flag_eos is activated
+  suffix <- NULL
+  if (!flag_eos) suffix <- "_obs_mat"
+  generate_cal_results(sim_final, obs_list, obsVar_units, obsVar_used, 
+                       sitNames_corresp, template_path, out_dir, 
+                       varNames_corresp, resVar_names, paste0(file_type,suffix),
+                       use_obs_synth=use_obs_synth, sim_true=sim_true, 
+                       descr_ref_date=descr_ref_date, flag_obs_mat=TRUE, flag_eos=flag_eos)
+  
+  # Same but results at maturity are extracted at simulated date (in case flag_eos not activated, as complementary results)
+  if (!flag_eos) {
+    suffix <- "_simulated_mat"
+    generate_cal_results(sim_final, obs_list, obsVar_units, obsVar_used, 
+                         sitNames_corresp, template_path, out_dir, 
+                         varNames_corresp, resVar_names, paste0(file_type,suffix),
+                         use_obs_synth=use_obs_synth, sim_true=sim_true, 
+                         descr_ref_date=descr_ref_date, flag_obs_mat=FALSE, flag_eos=flag_eos)
+  }
+  
+}
 
 generate_cal_results <- function(sim_final, obs_list, obsVar_units, obsVar_used, 
-                                 sitNames_corresp, template_path, out_dir, test_case, 
-                                 variety,varNames_corresp, resVar_names, file_type,
+                                 sitNames_corresp, template_path, out_dir, 
+                                 varNames_corresp, resVar_names, file_type,
                                  use_obs_synth=FALSE, sim_true=NULL, descr_ref_date=NULL,
                                  flag_obs_mat=TRUE, flag_eos) {
   
@@ -332,12 +267,7 @@ generate_cal_results <- function(sim_final, obs_list, obsVar_units, obsVar_used,
     sim_final_converted$sim_list <- sim_final_converted$sim_list_converted
   }
     
-  # Compute stats criteria
-  stats <- summary(sim_final_converted$sim_list, obs=obs_list, stats=c("MSE", "Bias2","SDSD","LCS"))
-  write.table(dplyr::select(stats,-group, -situation),
-              file = file.path(out_dir,"stats.txt"),row.names = FALSE, quote=FALSE)
-  
-  
+
   # Generate the required results file
   
   ## Read the template
@@ -437,11 +367,8 @@ generate_cal_results <- function(sim_final, obs_list, obsVar_units, obsVar_used,
   
   
   
-  suffix <- NULL
-  if (test_case=="French") suffix <- paste0("_",variety) 
-  write.table(res_df,file = file.path(out_dir,paste0("cal_4_results_", test_case, 
-                                                     suffix, "_", file_type, 
-                                                     "_", model_name, ".txt")),
+  write.table(res_df,file = file.path(out_dir,paste0(file_type, 
+                                                     ".txt")),
               row.names = FALSE, quote=FALSE)
   
 }
@@ -449,8 +376,8 @@ generate_cal_results <- function(sim_final, obs_list, obsVar_units, obsVar_used,
 
 
 generate_obs_file <- function(obs_list, obsVar_units, obsVar_used, 
-                              sitNames_corresp, template_path, out_dir, test_case, 
-                              variety, varNames_corresp, resVar_names, file_type) {
+                              sitNames_corresp, template_path, out_dir, 
+                              varNames_corresp, resVar_names, file_type) {
   
   # Generate obs files for synthetic experiments
   
@@ -499,26 +426,22 @@ generate_obs_file <- function(obs_list, obsVar_units, obsVar_used,
                                                                                     origin=Origin),"%d/%m/%Y")))) %>%
     select(-Origin, -year_sowing) %>% relocate(names(template_df))
   
-  suffix <- NULL
-  if (test_case=="French") suffix <- paste0("_",variety) 
-  write.table(res_df_full,file = file.path(out_dir,paste0("cal_4_obs_", test_case, 
-                                                     suffix, "_", file_type, "_", 
-                                                     model_name, ".txt")),
+  write.table(res_df_full,file = file.path(out_dir,paste0("cal_4_obs_", 
+                                                     file_type, ".txt")),
               row.names = FALSE, quote=FALSE)
   
 }
 
 
-generate_parameters_table <- function(res, group_names, forced_param_values) {
+generate_parameters_table <- function(res, group_names, forced_param_values, step) {
   table <- bind_rows(lapply(names(res$final_values), function(param) {
     setNames(
       tibble(group_names[param],
              param,
 			 forced_param_values[param],
-             res$init_values[res$ind_min_crit, param],
              res$final_values[param]),
-      nm=c("Name of the group","Name of the estimated parameter","Default value",
-             "Selected initial value", "Final value")
+      nm=c("Group","Parameter","Default value",
+             paste("Value after step",step))
     )
   }))
   
