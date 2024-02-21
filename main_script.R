@@ -181,7 +181,7 @@ if (test_case=="Australian" & data_without_Minnipa) {
 obs_data_path <- file.path(here(),obs_data_folder,paste0("cal_4_obs_",test_case,suffix,".txt"))
 obs_unit_path <- file.path(here(),obs_data_folder,paste0("cal_4_obs_",test_case,"_units.csv"))
 ## Get the reference date for each situation
-template_path <- file.path(here(),"data",paste0("cal_4_results_",test_case,suffix,"_numerical_modelName_contact_person.txt"))
+template_path <- file.path(here(),"data",paste0("simulations_template.txt"))
 ref_date <- get_reference_date(descr_ref_date, template_path)
 
 obs <- load_obs(obs_data_path, obs_unit_path, varNames_corresp,
