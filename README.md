@@ -46,6 +46,8 @@ If you need assistance, please send an email to "samuel DOT buis AT inrae DOT fr
 
 ## Results
 
+### Results files automatically generated
+
 A set of files containing results is automatically generated (by default in folder results/test_case/variety, where test_case=="French" or "Australian"):
 
 * tables of simulated results:
@@ -72,5 +74,11 @@ If the code is run on synthetic experiments (see associated option at the beginn
 * **simulations_true_values.txt**:	the true values generated for both calibration and evaluation datasets for the variables required in the protocol
 * **cal_4_obs_true_values_ModelName.txt**  and **cal_4_obs_noisy_values_SDnoise_ModelName.txt**:	the true and noisy values generated for the observations used
 
+### Verification of results 
 
+Once you have done the calibration, please look at the outputs to verify that the results seem reasonable. You can for example use the graphs in the scatterplots_\*\*\*.pdf files to check your choice for the order of variable groups, and your choice of major parameters.  The order of variable groups should be such that estimating parameters for one group has little or no effect on the fit to groups used previously. This should be visible from the graphs. For example, the graphs after estimation of the candidates for plant_N_content should show that the fit to variables previously treated should be about the same as before using plant_N_content. Also, the role of the major parameters is to approximately eliminate bias. This should appear in the graphs. For example, overall bias of variable Grain_Yield after estimating the major parameters for group yield, should be small compared to the bias using the default parameter values. 
+
+### Results files to provide for AgMIP Calibration Phase IV exercise
+
+Please copy the files simulations_\*\*\*.txt, variables_\*\*\*.csv, scatterplots_\*\*\*.pdf, parameters.csv, summary_step\*.csv and the folder DailyOutputs, in a single folder named “Model_yourName” (e.g.” STICS_Buis”) and upload the folder [here](https://uni-bonn.sciebo.de/s/1j1T5LdjZxTpe4J).
 
