@@ -60,9 +60,6 @@ variety <- "A"  # "A" or "B"
 xls_path <- "path_to_protocol_description_file"
   
 # Set-up your model wrapper
-## Give here the name of your model (just used for naming some output files)
-model_name <- "my_model_name"
-
 ## Source the file including your model wrapper: 
 ## replace path_to_my_model_wrapper in the following line by the actual path to 
 ## the file including the code of your model wrapper  
