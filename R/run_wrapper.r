@@ -8,21 +8,11 @@ run_wrapper <- function(model_wrapper, model_options, param_values, situation, v
   # Compute parameter values in case there are some equality constraints defined in parma_values
   param_values <- CroptimizR:::compute_eq_const(param_values, NULL)
   
-  if ( (("situation" %in% names(formals(model_wrapper))) & ("var" %in% names(formals(model_wrapper)))) ) {
-    
-    sim <- model_wrapper(model_options = model_options,
-                         param_values = param_values,
-                         situation = situation,
-                         var = var)
-    
-  } else if ( ("sit_names" %in% names(formals(model_wrapper))) & ("var_names" %in% names(formals(model_wrapper)))) {
-    
-    sim <- model_wrapper(model_options = model_options,
-                         param_values = param_values,
-                         sit_names = situation,
-                         var_names = var)
-    
-  }
+  arglist <- list(model_options = model_options, param_values = param_values,
+                  situation = situation, sit_names = situation,
+                  var = var, var_names = var)
+  sim <- do.call(model_wrapper, args = arglist[intersect(names(formals(model_wrapper)),
+                                                         names(arglist))])
   
   if (!is.null(transform_sim)) {
     
