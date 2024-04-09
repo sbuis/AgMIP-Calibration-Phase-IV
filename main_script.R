@@ -120,8 +120,6 @@ transform_inputs <- NULL
 # the following lines will set it to project_path/results/test_case/variety
 # can be changed if needed
 out_dir <- file.path(here(),"results",test_case,variety)
-if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
-
 
 # Synthetic observation mode (set to TRUE to test the protocol using synthetic observations 
 #                                    FALSE to apply phaseIV protocol to real data)
@@ -250,12 +248,6 @@ if (debug) {
 
 }
 
-# Save configuration
-if (checkpoint_restart) {
-  save.image(file=file.path(out_dir,"config.Rdata"))
-}
-
-
 # Initialize some local variables 
 flag_checkpoint <- FALSE
 igr <- 0
@@ -264,17 +256,28 @@ weight_it2 <- NULL;
 complem_info <- list(it1=list(), it2=list())
 
 if (file.exists(file.path(out_dir,"checkpoint.Rdata"))) {
-  load(file.path(out_dir,"checkpoint.Rdata"))
-  flag_checkpoint <- TRUE
+											 
+						 
   if (file.exists(file.path(out_dir,"config.Rdata"))) {
     load(file.path(out_dir,"config.Rdata"))
   }
+  load(file.path(out_dir,"checkpoint.Rdata"))
+  flag_checkpoint <- TRUE
   if (file.exists(file.path(out_dir,"complementary_info.Rdata"))) {
     load(file.path(out_dir,paste0("complementary_info.Rdata")))
   }
-}
+} else {
+  # Save configuration
+  if (checkpoint_restart) {
+    save.image(file=file.path(out_dir,"config.Rdata"))
+  }								  
+  if (dir.exists(out_dir)) {
+    unlink(out_dir, recursive = TRUE)
+  } 
+  dir.create(out_dir, recursive = TRUE)
+}  
 
-# Initialize tranqsformation function
+# Initialize transformation function
 transform_var <- NULL
 transform_var_converted <- NULL
 if ("Biomass" %in% names(varNames_corresp)) {
