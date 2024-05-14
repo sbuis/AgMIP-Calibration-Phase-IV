@@ -465,7 +465,7 @@ final_forced_param_values <- forced_param_values[setdiff(names(forced_param_valu
 
 if (is.null(res_it2)) {
  
-  optim_options$out_dir <- file.path(out_dir,"step 7")
+  optim_options$out_dir <- file.path(out_dir,"step7")
 
   # Define the weight to use in the criterion to minimize
   ## apply transformation to sim_it1 first

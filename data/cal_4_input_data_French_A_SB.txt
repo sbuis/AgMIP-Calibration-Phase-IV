@@ -1,0 +1,23 @@
+Number	Situation Name	Site	HarvestYear	SowingDate
+1	Site1-culA-12-tec13	Site_1	2012	10/11/2011
+3	Site1-culA-13-tec18	Site_1	2013	23/10/2012
+11	Site2-culA-10-tec2	Site_2	2010	08/10/2009
+13	Site2-culA-11-tec7	Site_2	2011	07/10/2010
+17	Site2-culA-14-tec24	Site_2	2014	07/10/2013
+19	Site2-culA-15-tec34	Site_2	2015	15/10/2014
+21	Site3-culA-12-tec11	Site_3	2012	11/10/2011
+23	Site3-culA-13-tec19	Site_3	2013	18/10/2012
+29	Site4-culA-11-tec5	Site_4	2011	13/10/2010
+31	Site5-culA-12-tec12	Site_5	2012	12/10/2011
+33	Site6-culA-13-tec22	Site_6	2013	24/10/2012
+35	Site7-culA-14-tec27	Site_7	2014	15/10/2013
+37	Site8-culA-15-tec37	Site_8	2015	14/10/2014
+41	Site9-culA-12-tec14	Site_9	2012	21/10/2011
+43	Site9-culA-13-tec21	Site_9	2013	30/10/2012
+49	Site11-culA-10-tec1	Site_10	2010	30/10/2009
+51	Site11-culA-11-tec4	Site_10	2011	28/10/2010
+57	Site11-culA-14-tec30	Site_10	2014	21/10/2013
+59	Site11-culA-15-tec32	Site_10	2015	27/10/2014
+65	Site12-culA-14-tec26	Site_11	2014	21/10/2013
+67	Site12-culA-15-tec36	Site_11	2015	23/10/2014
+69	Site12-culA-16-tec40	Site_11	2016	21/10/2015
