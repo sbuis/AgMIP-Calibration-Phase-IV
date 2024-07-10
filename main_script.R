@@ -267,14 +267,14 @@ if (file.exists(file.path(out_dir,"checkpoint.Rdata"))) {
     load(file.path(out_dir,paste0("complementary_info.Rdata")))
   }
 } else {
-  # Save configuration
-  if (checkpoint_restart) {
-    save.image(file=file.path(out_dir,"config.Rdata"))
-  }								  
   if (dir.exists(out_dir)) {
     unlink(out_dir, recursive = TRUE)
   } 
   dir.create(out_dir, recursive = TRUE)
+  # Save configuration
+  if (checkpoint_restart) {
+    save.image(file=file.path(out_dir,"config.Rdata"))
+  }								  
 }  
 
 # Initialize transformation function
