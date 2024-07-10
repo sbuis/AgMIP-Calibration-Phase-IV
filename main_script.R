@@ -317,7 +317,7 @@ while (igr < length(param_group)) {
   
   ## Filter observations to use for the current group
   crt_var_list <- varNames_corresp[intersect(obsVar_used,
-                                             names(obsVar_group)[grep(gr, obsVar_group)])]
+                                             names(obsVar_group)[which(obsVar_group %in% gr)])]
   crt_obs_list <- filter_obs(obs_list=converted_obs_list, var=crt_var_list, include=TRUE)
   
   ## Filter information on the parameters to estimate for the current group
