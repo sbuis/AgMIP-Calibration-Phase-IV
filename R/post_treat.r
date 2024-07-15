@@ -44,10 +44,12 @@ generate_results_files <- function(param_group, model_options,
   dirs <- list.dirs(file.path(out_dir,"step6"))
   files <- list.files(path=dirs, pattern="optim_results.Rdata", full.names = TRUE)          
   files <- lapply(group_names, function(x) {
-    if (length(grep(x,files))>1) {
-      return(files[grep(x,files)[-1]])
+    if (length(grep(paste0("/group_",x,"/"),files))>1) {
+      # there are several steps => do not consider file "group_x/optim_results.Rdata"
+      # but only files "group_x/step_#/optim_results.Rdata"
+      return(files[grep(paste0("/group_",x,"/"),files)[-1]]) 
     } else {
-      return(files[grep(x,files)])
+      return(files[grep(paste0("/group_",x,"/"),files)])
     }
   })
   names(files) <- group_names
