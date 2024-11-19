@@ -1,7 +1,7 @@
 # AgMIP-Calibration-Phase-IV
-Scripts and functions to apply [AgMIP Calibration phase IV protocol](https://www.biorxiv.org/content/10.1101/2023.10.26.564162v2.full.pdf) using CroptimizR and CroPlotR R packages. 
+Scripts and functions to apply the [AgMIP Calibration phase IV protocol (Wallach et al., 2024)](https://www.biorxiv.org/content/10.1101/2023.10.26.564162v2.full.pdf) to the datasets provided in the AgMIP Calibration phase IV exercises, using CroptimizR and CroPlotR R packages. 
 
-This repository has been created to gather useful functions, scripts, examples and data for participants of the AgMIP Calibration Phase IV protocol who will use the software solution based on the [CroptimizR](https://github.com/SticsRPacks/CroptimizR) and [CroPlotR](https://github.com/SticsRPacks/CroPlotR) R packages. The features implemented in these functions and scripts will be integrated into future versions of the CroptimizR package.
+This repository has been created to gather useful functions, scripts, examples and data for participants of the AgMIP Calibration Phase IV protocol who will use the software solution based on the [CroptimizR](https://github.com/SticsRPacks/CroptimizR) and [CroPlotR](https://github.com/SticsRPacks/CroPlotR) R packages with their own model. The features implemented in these functions and scripts are partly specific to the dataset used and will be integrated in a generic way (i.e. independent from the dataset used) into future versions of the CroptimizR package.
 
 ## What does it contain?
 
@@ -82,3 +82,6 @@ Once you have done the calibration, please look at the outputs to verify that th
 
 Please copy the files simulations_\*\*\*.txt, variables_\*\*\*.csv, scatterplots_\*\*\*.pdf, parameters.csv, summary_step\*.csv and the folder DailyOutputs, in a single folder named “Model_yourName” (e.g.” STICS_Buis”) and upload the folder [here](https://uni-bonn.sciebo.de/s/1j1T5LdjZxTpe4J).
 
+# References
+
+Wallach, D., Buis, S., Seserman, D. M., Palosuo, T., Thorburn, P. J., Mielenz, H.,  Justes, E., Kersebaum, K-C, Dumont, B., Launay, M., Seidel, S. J. (2024). A calibration protocol for soil-crop models. Environmental Modelling & Software, 180, 106147.
