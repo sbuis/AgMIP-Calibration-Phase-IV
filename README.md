@@ -85,3 +85,5 @@ Please copy the files simulations_\*\*\*.txt, variables_\*\*\*.csv, scatterplots
 # References
 
 Wallach, D., Buis, S., Seserman, D. M., Palosuo, T., Thorburn, P. J., Mielenz, H.,  Justes, E., Kersebaum, K-C, Dumont, B., Launay, M., Seidel, S. J. (2024). A calibration protocol for soil-crop models. Environmental Modelling & Software, 180, 106147.
+
+Wallach, D., Kim, K. S., Hyun, S., Buis, S., Thorburn, P. J., Mielenz, H., Seidel, S. J., Alderman, P. D., Dumont, B., Fallah, M. H., Hoogenboom, G., Justes, E., Kersebaum, K.-C., Launay, M., Leolini, L., Mehmood, M. Z., Moriondo, M., Jing Q., Qian, B., Schulz, S., Seserman, D. M., Shelia, V., Weihermüller, L., Palosuo, T. The AgMIP calibration protocol for crop models; increasing reliability through additional diagnostics. Submitted to European Journal of Agronomy.
